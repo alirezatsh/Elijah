@@ -1,0 +1,54 @@
+$ink: #eef4ff;
+$muted: #91a1c3;
+$elijah-surface: #0f182b;
+$elijah-raised: #17233d;
+$cyan: #64d9ff;
+$mint: #7de2d1;
+
+Screen { background: #070c17; color: $ink; }
+Header { background: #0f182b; color: $ink; }
+Footer { background: #0f182b; color: $muted; }
+#hero { height: 8; margin: 1 3; align: center middle; }
+#brand { width: 1fr; padding-left: 1; border-left: tall $cyan; }
+#logo { color: $cyan; text-style: bold; height: 3; content-align: left middle; }
+#product-label { color: $muted; }
+.stat { width: 22; height: 6; margin-left: 1; padding: 1 2; background: $elijah-surface; border: round #29436d; color: $mint; text-align: center; text-style: bold; }
+.signal { color: $cyan; border: round $cyan; }
+TabbedContent { margin: 0 3; }
+TabPane { padding: 1 0; }
+#capture-layout { height: 1fr; }
+#capture-form { width: 65%; height: 1fr; padding: 1 2; background: $elijah-surface; border: round #29436d; }
+.section-label { color: $cyan; text-style: bold; margin-bottom: 1; }
+.field-label { color: $muted; margin-top: 1; }
+Input, Select { margin-bottom: 1; background: #0a1121; border: tall #334c78; }
+Input:focus, Select:focus { border: tall $cyan; }
+TextArea { height: 1fr; background: #0a1121; border: tall #334c78; }
+TextArea:focus { border: tall $cyan; }
+#capture-actions { height: 3; margin-top: 1; align: right middle; }
+#capture-actions Button { margin-left: 1; }
+#live-guide { width: 1fr; height: 1fr; margin-left: 1; padding: 1 2; background: $elijah-surface; border: round #29436d; }
+#cli-guide { color: #d8e4ff; }
+#privacy-note { color: $muted; margin-top: 2; border-left: tall $mint; padding-left: 1; }
+#archive-layout { height: 1fr; }
+#ai-list, #fix-note-list { width: 49%; height: 1fr; }
+#ai-list Select, #fix-note-list Select { margin-bottom: 1; }
+#ai-incident-table, #fix-note-table { height: 1fr; background: $elijah-surface; border: round #29436d; }
+DataTable > .datatable--header { background: $elijah-raised; color: $cyan; text-style: bold; }
+DataTable > .datatable--cursor { background: #2b4a78; color: white; }
+#detail { width: 1fr; height: 1fr; margin-left: 1; padding: 1 2; background: $elijah-surface; border: round #29436d; }
+#detail-label { color: $cyan; text-style: bold; margin-bottom: 1; }
+#ai-detail-content, #fix-note-detail-content { height: 1fr; overflow-y: auto; color: #dbe4f8; }
+#detail-actions { height: 3; margin-top: 1; align: right middle; }
+#detail-actions Button { margin-left: 1; }
+.action-label { color: $muted; margin-top: 1; }
+#ai-primary-actions, #ai-secondary-actions { height: 3; align: right middle; }
+#ai-primary-actions Button, #ai-secondary-actions Button { margin-left: 1; }
+#detail-actions Button:hover, #ai-primary-actions Button:hover, #ai-secondary-actions Button:hover, #ask-command:hover { background: #315a84; }
+#timeline-note { color: $muted; margin-bottom: 1; }
+#timeline-layout { height: 1fr; }
+#event-table { width: 62%; height: 1fr; background: $elijah-surface; border: round #29436d; }
+#event-detail { width: 1fr; height: 1fr; margin-left: 1; padding: 1 2; background: $elijah-surface; border: round #29436d; }
+#event-content { height: 1fr; color: #dbe4f8; }
+Notification { border: round $cyan; background: #132543; }
+Button { border: none; }
+Button:focus { text-style: bold; }
