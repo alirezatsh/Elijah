@@ -39,3 +39,27 @@ class CommandEvent:
     exit_code: int
     duration_ms: int
     created: float
+
+
+@dataclass
+class DockerTarget:
+    """A container or Compose service that Elijah should remember locally."""
+
+    id: str
+    name: str
+    compose_file: str
+    created: float
+    enabled: bool = True
+
+
+@dataclass
+class RemoteServer:
+    """An SSH-reachable Linux server managed from the local Elijah dashboard."""
+
+    id: str
+    name: str
+    host: str
+    user: str
+    port: int
+    identity_file: str
+    created: float

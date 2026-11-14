@@ -11,6 +11,7 @@ Elijah is a terminal incident workspace for deliberate requests to any OpenAI-co
 - Explicit capture helpers for pipes, files, Docker logs, and system journal errors
 - Full terminal-session transcripts through `elijah-shell`
 - Persistent shell integration for zsh, bash, and fish
+- Docker watchlist: remember containers or Compose services, inspect state, and analyze bounded recent logs on demand
 - Compatible with OpenAI and other `/chat/completions` providers
 - Local Fix Notes library for proven fixes, prevention notes, and credential redaction
 
@@ -163,6 +164,28 @@ elijah-shell
 
 Run the commands you are investigating inside that shell. When it exits, Elijah queues the transcript as a forensic-session incident.
 
+## Remember Docker containers
+
+Open **Container watchlist** in Elijah and enter either a container name or a Compose service name. A Compose file path is optional; when supplied, Elijah resolves the service through `docker compose -f <file> ps --all --quiet <service>`, so stopped Compose containers can be started as well.
+
+The watchlist is stored locally. **Refresh** reads Docker state, health-check status, restart count, and image metadata without reading logs. **Capture logs** saves the latest 300 timestamped log lines as a local captured incident. **Analyze logs** reads the same bounded log tail, creates an incident, and sends it to the configured AI provider only after you explicitly choose that button.
+
+The same panel can **Start**, **Stop**, or **Restart** the selected local container. Each lifecycle action opens a confirmation dialog before Elijah sends the Docker command; it does not remove containers, images, volumes, or networks.
+
+Docker log output can contain secrets. Review your container logging policy and use Elijah's configured provider only when you intend to share the selected evidence.
+
+## Central dashboard for remote servers
+
+The **Servers** tab connects to Linux servers through the local OpenSSH client. Add a label, host or IP address, SSH user, port, and optionally a local private-key path. Elijah verifies the connection before saving a server, then lists that server's Docker containers. Select a server first, then use **Sync this server's commands** to import only that server's Elijah timeline; its commands appear in the dedicated **This server's commands** table in the same panel. Select a remote container to capture or analyze its latest 300 log lines in the same local archive. The selected-container controls can Start, Stop, or Restart it over SSH, with a confirmation dialog before each action.
+
+For security, Elijah does not store SSH passwords. Use an SSH key, an entry in `~/.ssh/config`, or a running SSH agent. The remote account needs permission to run `docker ps`, `docker logs`, `docker start`, `docker stop`, `docker restart`, and to read its own `~/.elijah-investigator/command-events.json` file.
+
+To centralize commands run on a remote server, install Elijah on that server, enable its shell integration, select that server in the local dashboard, and then choose **Sync this server's commands**. Elijah pulls only that server's command metadata into the local timeline; remote logs are fetched only when you explicitly capture or analyze a selected remote container.
+
+## Clear local data
+
+Each archive or saved-list view has a contextual **Clear** button with a confirmation dialog: AI archive, Command Advisor timeline, Fix Notes library, Container watchlist, and saved server connections. These actions only remove Elijah's local records. They never delete Docker containers, images, volumes, remote server files, shell history, or AI-provider credentials.
+
 ## Use the Command Advisor
 
 Open **AI command advisor**, select a command, and choose **Ask AI about this command**. Useful prompts include:
@@ -200,6 +223,8 @@ Elijah stores the following under `~/.elijah-investigator/`:
 - `incidents.json` — AI investigations and responses
 - `fix-notes.json` — private records of failures, proven fixes, and prevention notes
 - `command-events.json` — command timeline metadata
+- `docker-targets.json` — locally remembered container names and optional Compose file paths
+- `remote-servers.json` — named SSH server connections and optional local key-file paths
 - `config.json` — saved AI endpoint, model, and API key
 - `inbox/` — pending captures
 - `sessions/` — forensic transcripts

@@ -8,14 +8,18 @@ $mint: #7de2d1;
 Screen { background: #070c17; color: $ink; }
 Header { background: #0f182b; color: $ink; }
 Footer { background: #0f182b; color: $muted; }
-#hero { height: 8; margin: 1 3; align: center middle; }
+#hero { dock: top; height: 8; margin: 1 3; align: center middle; background: #070c17; }
 #brand { width: 1fr; padding-left: 1; border-left: tall $cyan; }
 #logo { color: $cyan; text-style: bold; height: 3; content-align: left middle; }
 #product-label { color: $muted; }
 .stat { width: 22; height: 6; margin-left: 1; padding: 1 2; background: $elijah-surface; border: round #29436d; color: $mint; text-align: center; text-style: bold; }
 .signal { color: $cyan; border: round $cyan; }
-TabbedContent { margin: 0 3; }
-TabPane { padding: 1 0; }
+TabbedContent { height: 1fr; margin: 0 3; }
+ContentTab { padding: 0 1; color: $muted; }
+ContentTab:hover { color: $cyan; }
+ContentTab.-active { color: $cyan; text-style: bold; }
+ContentTabs Underline > .underline--bar { color: $cyan; background: $cyan; }
+TabPane { height: 1fr; padding: 1 0; overflow: auto; }
 #capture-layout { height: 1fr; }
 #capture-form { width: 65%; height: 1fr; padding: 1 2; background: $elijah-surface; border: round #29436d; }
 .section-label { color: $cyan; text-style: bold; margin-bottom: 1; }
@@ -24,8 +28,8 @@ Input, Select { margin-bottom: 1; background: #0a1121; border: tall #334c78; }
 Input:focus, Select:focus { border: tall $cyan; }
 TextArea { height: 1fr; background: #0a1121; border: tall #334c78; }
 TextArea:focus { border: tall $cyan; }
-#capture-actions { height: 3; margin-top: 1; align: right middle; }
-#capture-actions Button { margin-left: 1; }
+#capture-actions { height: auto; margin-top: 1; grid-size: 2; grid-gutter: 1 1; }
+#capture-actions Button { width: 1fr; }
 #live-guide { width: 1fr; height: 1fr; margin-left: 1; padding: 1 2; background: $elijah-surface; border: round #29436d; }
 #cli-guide { color: #d8e4ff; }
 #privacy-note { color: $muted; margin-top: 2; border-left: tall $mint; padding-left: 1; }
@@ -38,17 +42,52 @@ DataTable > .datatable--cursor { background: #2b4a78; color: white; }
 #detail { width: 1fr; height: 1fr; margin-left: 1; padding: 1 2; background: $elijah-surface; border: round #29436d; }
 #detail-label { color: $cyan; text-style: bold; margin-bottom: 1; }
 #ai-detail-content, #fix-note-detail-content { height: 1fr; overflow-y: auto; color: #dbe4f8; }
-#detail-actions { height: 3; margin-top: 1; align: right middle; }
-#detail-actions Button { margin-left: 1; }
+#detail-actions { height: auto; margin-top: 1; grid-size: 3; grid-gutter: 1 1; }
+#fix-danger-actions { height: auto; margin-top: 1; grid-size: 1; }
+#detail-actions Button, #fix-danger-actions Button { width: 1fr; }
 .action-label { color: $muted; margin-top: 1; }
-#ai-primary-actions, #ai-secondary-actions { height: 3; align: right middle; }
-#ai-primary-actions Button, #ai-secondary-actions Button { margin-left: 1; }
-#detail-actions Button:hover, #ai-primary-actions Button:hover, #ai-secondary-actions Button:hover, #ask-command:hover { background: #315a84; }
+.action-group-label { color: $muted; margin-top: 1; }
+#ai-primary-actions { height: auto; margin-top: 1; grid-size: 3; grid-gutter: 1 1; }
+#ai-danger-actions { height: auto; margin-top: 1; grid-size: 1; }
+#ai-primary-actions Button, #ai-danger-actions Button { width: 1fr; }
+#detail-actions Button:hover, #ai-primary-actions Button:hover, #ask-command:hover { background: #315a84; }
 #timeline-note { color: $muted; margin-bottom: 1; }
 #timeline-layout { height: 1fr; }
 #event-table { width: 62%; height: 1fr; background: $elijah-surface; border: round #29436d; }
 #event-detail { width: 1fr; height: 1fr; margin-left: 1; padding: 1 2; background: $elijah-surface; border: round #29436d; }
 #event-content { height: 1fr; color: #dbe4f8; }
+#event-actions { height: auto; grid-size: 2; grid-gutter: 1 1; }
+#event-actions Button { width: 1fr; }
+#docker-add-row { height: 3; margin-bottom: 1; align: left middle; }
+#docker-add-row Input { width: 1fr; margin-right: 1; }
+#docker-add-row Button { width: 24; }
+#docker-guide { color: $muted; margin-bottom: 1; }
+#docker-layout { height: 1fr; }
+#docker-list { width: 56%; height: 1fr; }
+#docker-table { height: 1fr; background: $elijah-surface; border: round #29436d; }
+#docker-detail { width: 1fr; height: 1fr; margin-left: 1; padding: 1 2; background: $elijah-surface; border: round #29436d; overflow-y: auto; }
+#docker-detail-content { height: 1fr; overflow-y: auto; color: #dbe4f8; }
+#docker-primary-actions, #docker-control-actions, #docker-danger-actions {
+    height: auto; margin-top: 1; grid-size: 2; grid-gutter: 1 1;
+}
+#docker-primary-actions Button, #docker-control-actions Button, #docker-danger-actions Button { width: 1fr; }
+#remote-add-row { height: 3; margin-bottom: 1; align: left middle; }
+#remote-add-row Input { width: 1fr; margin-right: 1; }
+#remote-add-row Button { width: 18; }
+#remote-guide { color: $muted; margin-bottom: 1; }
+#remote-layout { height: 1fr; }
+#remote-server-list { width: 29%; height: 1fr; }
+#remote-container-list { width: 36%; height: 1fr; margin-left: 1; }
+#remote-server-table, #remote-container-table { height: 1fr; background: $elijah-surface; border: round #29436d; }
+#remote-detail { width: 1fr; height: 1fr; margin-left: 1; padding: 1 2; background: $elijah-surface; border: round #29436d; overflow-y: auto; }
+#remote-detail-content { height: 8; overflow-y: auto; color: #dbe4f8; }
+#remote-event-table { height: 1fr; background: $elijah-surface; border: round #29436d; }
+#remote-server-actions, #remote-danger-actions, #remote-primary-actions, #remote-control-actions {
+    height: auto; margin-top: 1; grid-size: 2; grid-gutter: 1 1;
+}
+#remote-server-actions Button, #remote-danger-actions Button, #remote-primary-actions Button, #remote-control-actions Button { width: 1fr; }
+#remote-danger-actions { grid-size: 1; }
 Notification { border: round $cyan; background: #132543; }
-Button { border: none; }
+Button { height: 3; min-width: 12; padding: 0 1; border: none; content-align: center middle; }
 Button:focus { text-style: bold; }
+Button:disabled { color: #60708f; background: #0d1424; }

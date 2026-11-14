@@ -22,7 +22,7 @@ check-it = "check_it:main"
 elijah-shell = "elijah_shell:main"
 
 [tool.setuptools]
-py-modules = ["elijah", "check_it", "elijah_shell", "shell_setup", "elijah_models"]
+py-modules = ["elijah", "check_it", "elijah_shell", "shell_setup", "elijah_models", "elijah_docker", "elijah_remote"]
 
 [tool.setuptools.packages.find]
 include = ["elijah_shells*"]
