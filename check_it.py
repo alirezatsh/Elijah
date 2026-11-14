@@ -13,6 +13,7 @@ from uuid import uuid4
 INBOX_DIR = Path.home() / ".elijah-investigator" / "inbox"
 
 
+# Handle the queue capture workflow for this component.
 def queue_capture(title: str, command: str, evidence: str, source: str) -> None:
     """Write a capture atomically enough for the TUI's polling inbox."""
     INBOX_DIR.mkdir(parents=True, exist_ok=True)
@@ -21,6 +22,7 @@ def queue_capture(title: str, command: str, evidence: str, source: str) -> None:
     print(f"Queued for Elijah Investigator: {target.name}")
 
 
+# Handle the queue event workflow for this component.
 def queue_event(command: str, cwd: str, exit_code: int, duration_ms: int) -> None:
     """Queue a lightweight shell event; no terminal output is read here."""
     INBOX_DIR.mkdir(parents=True, exist_ok=True)
@@ -31,6 +33,7 @@ def queue_event(command: str, cwd: str, exit_code: int, duration_ms: int) -> Non
     }, ensure_ascii=False))
 
 
+# Run the command-line entrypoint and dispatch the requested workflow.
 def main() -> None:
     # `check-it run -- curl -i …` is intentionally argv-only: no hidden shell.
     if len(sys.argv) > 2 and sys.argv[1] == "run":

@@ -38,6 +38,7 @@ SECRET_PATTERNS = (
 )
 
 
+# Handle the redact workflow for this component.
 def redact(value: str) -> str:
     for pattern, replacement in SECRET_PATTERNS:
         value = pattern.sub(replacement, value)
@@ -57,10 +58,12 @@ class SettingsScreen(ModalScreen[dict | None]):
     .small-note { color: #94a5c8; margin: 1 0; }
     """
 
+    # Initialize this component and establish its local state.
     def __init__(self, config: dict) -> None:
         super().__init__()
         self.config = config
 
+    # Build this Textual component and declare its child widgets.
     def compose(self) -> ComposeResult:
         with Container(id="settings"):
             yield Label("AI CONNECTION", id="settings-title")
@@ -72,6 +75,7 @@ class SettingsScreen(ModalScreen[dict | None]):
                 yield Button("Cancel", id="cancel")
                 yield Button("Save securely", id="save", variant="success")
 
+    # Validate and save the settings entered through the interface.
     @on(Button.Pressed)
     def save_settings(self, event: Button.Pressed) -> None:
         if event.button.id == "cancel":
@@ -98,10 +102,12 @@ class CommandQuestion(ModalScreen[str | None]):
     #question-actions Button { width: 1fr; }
     """
 
+    # Initialize this component and establish its local state.
     def __init__(self, command: str) -> None:
         super().__init__()
         self.command = command
 
+    # Build this Textual component and declare its child widgets.
     def compose(self) -> ComposeResult:
         with Container(id="question-box"):
             yield Label("ASK COMMAND ADVISOR")
@@ -111,6 +117,7 @@ class CommandQuestion(ModalScreen[str | None]):
                 yield Button("Cancel", id="cancel")
                 yield Button("Ask AI", id="ask", variant="success")
 
+    # Handle the submit workflow for this component.
     @on(Button.Pressed)
     def submit(self, event: Button.Pressed) -> None:
         if event.button.id == "cancel":
@@ -136,12 +143,14 @@ class ContainerActionScreen(ModalScreen[bool]):
     #container-action-actions Button { width: 1fr; }
     """
 
+    # Initialize this component and establish its local state.
     def __init__(self, action: str, target: str, location: str) -> None:
         super().__init__()
         self.action = action
         self.target = target
         self.location = location
 
+    # Build this Textual component and declare its child widgets.
     def compose(self) -> ComposeResult:
         with Container(id="container-action"):
             yield Label("CONFIRM CONTAINER ACTION", id="container-action-title")
@@ -154,10 +163,12 @@ class ContainerActionScreen(ModalScreen[bool]):
                 yield Button("Cancel", id="cancel")
                 yield Button(f"Confirm {self.action}", id="confirm", variant="error")
 
+    # Handle the submit workflow for this component.
     @on(Button.Pressed)
     def submit(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "confirm")
 
+    # Handle the named application action: cancel.
     def action_cancel(self) -> None:
         self.dismiss(False)
 
@@ -174,11 +185,13 @@ class ClearDataScreen(ModalScreen[bool]):
     #clear-data-actions Button { width: 1fr; }
     """
 
+    # Initialize this component and establish its local state.
     def __init__(self, collection: str, detail: str) -> None:
         super().__init__()
         self.collection = collection
         self.detail = detail
 
+    # Build this Textual component and declare its child widgets.
     def compose(self) -> ComposeResult:
         with Container(id="clear-data"):
             yield Label("CLEAR LOCAL DATA", id="clear-data-title")
@@ -189,10 +202,12 @@ class ClearDataScreen(ModalScreen[bool]):
                 yield Button("Cancel", id="cancel")
                 yield Button("Delete all", id="confirm", variant="error")
 
+    # Handle the submit workflow for this component.
     @on(Button.Pressed)
     def submit(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "confirm")
 
+    # Handle the named application action: cancel.
     def action_cancel(self) -> None:
         self.dismiss(False)
 
@@ -207,10 +222,12 @@ class IncidentEditor(ModalScreen[dict | None]):
     #incident-editor-actions Button { width: 1fr; }
     """
 
+    # Initialize this component and establish its local state.
     def __init__(self, incident: Incident) -> None:
         super().__init__()
         self.incident = incident
 
+    # Build this Textual component and declare its child widgets.
     def compose(self) -> ComposeResult:
         with Container(id="incident-editor"):
             yield Label("EDIT INCIDENT")
@@ -221,6 +238,7 @@ class IncidentEditor(ModalScreen[dict | None]):
                 yield Button("Cancel", id="cancel")
                 yield Button("Save", id="save", variant="success")
 
+    # Handle the submit workflow for this component.
     @on(Button.Pressed)
     def submit(self, event: Button.Pressed) -> None:
         if event.button.id == "cancel":
@@ -243,10 +261,12 @@ class FixNoteEditor(ModalScreen[dict | None]):
     #fix-note-editor-actions Button { width: 1fr; }
     """
 
+    # Initialize this component and establish its local state.
     def __init__(self, item: FixNote) -> None:
         super().__init__()
         self.item = item
 
+    # Build this Textual component and declare its child widgets.
     def compose(self) -> ComposeResult:
         with Container(id="fix-note-editor"):
             yield Label("EDIT FIX NOTE")
@@ -259,6 +279,7 @@ class FixNoteEditor(ModalScreen[dict | None]):
                 yield Button("Cancel", id="cancel")
                 yield Button("Save", id="save", variant="success")
 
+    # Handle the submit workflow for this component.
     @on(Button.Pressed)
     def submit(self, event: Button.Pressed) -> None:
         if event.button.id == "cancel":
@@ -266,12 +287,15 @@ class FixNoteEditor(ModalScreen[dict | None]):
             return
         self._dismiss_values()
 
+    # Handle the named application action: save note.
     def action_save_note(self) -> None:
         self._dismiss_values()
 
+    # Handle the named application action: cancel.
     def action_cancel(self) -> None:
         self.dismiss(None)
 
+    # Perform the internal dismiss values step for this workflow.
     def _dismiss_values(self) -> None:
         self.dismiss({
             "title": self.query_one("#fix-note-title", Input).value.strip(),
@@ -296,6 +320,7 @@ class Elijah(App):
         ("ctrl+q", "quit", "Quit"),
     ]
 
+    # Initialize this component and establish its local state.
     def __init__(self) -> None:
         super().__init__()
         self.incidents: list[Incident] = []
@@ -314,6 +339,7 @@ class Elijah(App):
         self.selected_remote_id: str | None = None
         self.selected_remote_container: str | None = None
 
+    # Build this Textual component and declare its child widgets.
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         with Horizontal(id="hero"):
@@ -460,6 +486,7 @@ class Elijah(App):
                             yield Button("Clear library", id="delete-all-fix-notes", variant="error")
         yield Footer()
 
+    # Handle the on mount workflow for this component.
     def on_mount(self) -> None:
         self.query_one("#ai-incident-table", DataTable).add_columns("Investigation", "Source", "State", "Captured")
         self.query_one("#fix-note-table", DataTable).add_columns("Lesson", "Context", "State", "Saved")
@@ -478,21 +505,25 @@ class Elijah(App):
         self.ingest_inbox()
         self._refresh()
 
+    # Refresh tab actions and update the visible state.
     @on(TabbedContent.TabActivated)
     def refresh_tab_actions(self) -> None:
         self._update_action_states()
 
     # ---- workspaces --------------------------------------------------
+    # Handle the named application action: clear capture.
     def action_clear_capture(self) -> None:
         self.query_one("#ai-title", Input).value = ""
         self.query_one("#ai-command", Input).value = ""
         self.query_one("#ai-evidence", TextArea).text = ""
         self.query_one("#ai-title", Input).focus()
 
+    # Handle the clear ai button workflow for this component.
     @on(Button.Pressed, "#clear-ai")
     def clear_ai_button(self) -> None:
         self.action_clear_capture()
 
+    # Handle the named application action: analyze.
     def action_analyze(self) -> None:
         if not self._is_configured():
             self.notify("Configure an AI provider with Ctrl+S before using AI Investigator.", severity="warning")
@@ -511,10 +542,12 @@ class Elijah(App):
         self._refresh()
         self.analyze_incident(incident.id)
 
+    # Prepare and run the analysis flow for ai button.
     @on(Button.Pressed, "#analyze-ai")
     def analyze_ai_button(self) -> None:
         self.action_analyze()
 
+    # Handle the clear fix note workflow for this component.
     @on(Button.Pressed, "#clear-fix-note")
     def clear_fix_note(self) -> None:
         for widget_id in ("fix-note-title", "fix-note-command", "fix-note-prevention"):
@@ -523,6 +556,7 @@ class Elijah(App):
             self.query_one(f"#{widget_id}", TextArea).text = ""
         self.query_one("#fix-note-title", Input).focus()
 
+    # Validate and save the fix note entered through the interface.
     @on(Button.Pressed, "#save-fix-note")
     def save_fix_note(self) -> None:
         title = self.query_one("#fix-note-title", Input).value.strip()
@@ -540,6 +574,7 @@ class Elijah(App):
         self.notify("Fix note saved locally.")
 
     # ---- container watchlist ---------------------------------------
+    # Validate and save the docker target entered through the interface.
     @on(Button.Pressed, "#save-docker-target")
     def save_docker_target(self) -> None:
         name = self.query_one("#docker-name", Input).value.strip()
@@ -564,11 +599,13 @@ class Elijah(App):
             return
         self.validate_docker_target(DockerTarget(uuid4().hex, name, compose_file, time.time()))
 
+    # Validate docker target before it is accepted by the application.
     @work(thread=True, exclusive=True, group="docker", exit_on_error=False)
     def validate_docker_target(self, target: DockerTarget) -> None:
         snapshot = read_snapshot(target)
         self.call_from_thread(self._finish_docker_target_validation, target, snapshot)
 
+    # Apply the completed background result for docker target validation to the UI state.
     def _finish_docker_target_validation(self, target: DockerTarget, snapshot: DockerSnapshot) -> None:
         if snapshot.error:
             self.notify(f"Container was not added: {snapshot.error}", severity="error")
@@ -583,24 +620,28 @@ class Elijah(App):
         self.query_one("#docker-compose-file", Input).value = ""
         self.notify("Container verified and saved locally.")
 
+    # Handle selection changes for docker target and refresh dependent controls.
     @on(DataTable.RowHighlighted, "#docker-table")
     def select_docker_target(self, event: DataTable.RowHighlighted) -> None:
         self.selected_docker_id = str(event.row_key.value)
         self._render_docker_detail()
         self._update_action_states()
 
+    # Refresh docker and update the visible state.
     @on(Button.Pressed, "#refresh-docker")
     def refresh_docker(self) -> None:
         target = self._selected_docker_target()
         if target:
             self.refresh_docker_target(target.id, include_logs=False, action="refresh")
 
+    # Handle the capture docker logs workflow for this component.
     @on(Button.Pressed, "#capture-docker")
     def capture_docker_logs(self) -> None:
         target = self._selected_docker_target()
         if target:
             self.refresh_docker_target(target.id, include_logs=True, action="capture")
 
+    # Prepare and run the analysis flow for docker logs.
     @on(Button.Pressed, "#analyze-docker")
     def analyze_docker_logs(self) -> None:
         if not self._is_configured():
@@ -610,18 +651,22 @@ class Elijah(App):
         if target:
             self.refresh_docker_target(target.id, include_logs=True, action="analyze")
 
+    # Handle the start docker workflow for this component.
     @on(Button.Pressed, "#start-docker")
     def start_docker(self) -> None:
         self._request_local_container_action("start")
 
+    # Handle the stop docker workflow for this component.
     @on(Button.Pressed, "#stop-docker")
     def stop_docker(self) -> None:
         self._request_local_container_action("stop")
 
+    # Handle the restart docker workflow for this component.
     @on(Button.Pressed, "#restart-docker")
     def restart_docker(self) -> None:
         self._request_local_container_action("restart")
 
+    # Prepare the requested local container action operation and its required input.
     def _request_local_container_action(self, action: str) -> None:
         target = self._selected_docker_target()
         if not target:
@@ -632,10 +677,12 @@ class Elijah(App):
             lambda confirmed: self._confirm_local_container_action(target.id, action, confirmed),
         )
 
+    # Perform the internal confirm local container action step for this workflow.
     def _confirm_local_container_action(self, target_id: str, action: str, confirmed: bool) -> None:
         if confirmed:
             self.run_local_container_action(target_id, action)
 
+    # Handle the run local container action workflow for this component.
     @work(thread=True, exclusive=True, group="docker", exit_on_error=False)
     def run_local_container_action(self, target_id: str, action: str) -> None:
         target = next((item for item in self.docker_targets if item.id == target_id), None)
@@ -649,6 +696,7 @@ class Elijah(App):
             error = str(exception)
         self.call_from_thread(self._finish_local_container_action, target_id, action, snapshot, error)
 
+    # Apply the completed background result for local container action to the UI state.
     def _finish_local_container_action(
         self, target_id: str, action: str, snapshot: DockerSnapshot | None, error: str
     ) -> None:
@@ -666,6 +714,7 @@ class Elijah(App):
         }[action]
         self.notify(f"Container {snapshot.container_ref} {action_name}.")
 
+    # Remove the selected docker target and refresh persisted state.
     @on(Button.Pressed, "#delete-docker")
     def delete_docker_target(self) -> None:
         target = self._selected_docker_target()
@@ -679,10 +728,12 @@ class Elijah(App):
         self._update_action_states()
         self.notify("Container removed from the local watchlist.")
 
+    # Remove the requested docker targets records after confirmation.
     @on(Button.Pressed, "#delete-all-docker")
     def delete_all_docker_targets(self) -> None:
         self._request_clear("docker", "remembered container targets", "This only removes the local watchlist; Docker containers are not deleted.")
 
+    # Refresh docker target and update the visible state.
     @work(thread=True, exclusive=True, group="docker", exit_on_error=False)
     def refresh_docker_target(self, target_id: str, *, include_logs: bool, action: str) -> None:
         target = next((item for item in self.docker_targets if item.id == target_id), None)
@@ -691,6 +742,7 @@ class Elijah(App):
         snapshot = read_snapshot(target, include_logs=include_logs)
         self.call_from_thread(self._handle_docker_snapshot, target_id, snapshot, action)
 
+    # Perform the internal handle docker snapshot step for this workflow.
     def _handle_docker_snapshot(self, target_id: str, snapshot: DockerSnapshot, action: str) -> None:
         self.docker_snapshots[target_id] = snapshot
         self._fill_docker_targets()
@@ -721,6 +773,7 @@ class Elijah(App):
         self.analyze_incident(incident.id)
 
     # ---- remote servers --------------------------------------------
+    # Validate and save the remote server entered through the interface.
     @on(Button.Pressed, "#save-remote")
     def save_remote_server(self) -> None:
         name = self.query_one("#remote-name", Input).value.strip()
@@ -748,6 +801,7 @@ class Elijah(App):
         server = RemoteServer(uuid4().hex, name, host, user, port, identity_file, time.time())
         self.validate_remote_server(server)
 
+    # Validate remote server before it is accepted by the application.
     @work(thread=True, exclusive=True, group="remote", exit_on_error=False)
     def validate_remote_server(self, server: RemoteServer) -> None:
         try:
@@ -758,6 +812,7 @@ class Elijah(App):
             error = str(exception)
         self.call_from_thread(self._finish_remote_server_validation, server, containers, error)
 
+    # Apply the completed background result for remote server validation to the UI state.
     def _finish_remote_server_validation(self, server: RemoteServer, containers: list[RemoteContainer], error: str) -> None:
         if error:
             self.notify(f"Server was not added: {error}", severity="error")
@@ -773,6 +828,7 @@ class Elijah(App):
         self.query_one("#remote-port", Input).value = "22"
         self.notify("Server verified and added to the central dashboard.")
 
+    # Handle selection changes for remote server and refresh dependent controls.
     @on(DataTable.RowHighlighted, "#remote-server-table")
     def select_remote_server(self, event: DataTable.RowHighlighted) -> None:
         server_id = str(event.row_key.value)
@@ -789,18 +845,21 @@ class Elijah(App):
         if server:
             self.refresh_remote_server(server.id)
 
+    # Handle selection changes for remote container and refresh dependent controls.
     @on(DataTable.RowHighlighted, "#remote-container-table")
     def select_remote_container(self, event: DataTable.RowHighlighted) -> None:
         self.selected_remote_container = str(event.row_key.value)
         self._render_remote_detail()
         self._update_action_states()
 
+    # Refresh remote button and update the visible state.
     @on(Button.Pressed, "#refresh-remote")
     def refresh_remote_button(self) -> None:
         server = self._selected_remote_server()
         if server:
             self.refresh_remote_server(server.id)
 
+    # Refresh remote server and update the visible state.
     @work(thread=True, exclusive=True, group="remote", exit_on_error=False)
     def refresh_remote_server(self, server_id: str) -> None:
         server = next((item for item in self.remote_servers if item.id == server_id), None)
@@ -814,6 +873,7 @@ class Elijah(App):
             error = str(exception)
         self.call_from_thread(self._finish_remote_refresh, server_id, containers, error)
 
+    # Apply the completed background result for remote refresh to the UI state.
     def _finish_remote_refresh(self, server_id: str, containers: list[RemoteContainer], error: str) -> None:
         if server_id != self.selected_remote_id:
             return
@@ -822,10 +882,12 @@ class Elijah(App):
         self._update_action_states()
         self.notify("Remote Docker state refreshed." if not error else f"Remote Docker unavailable: {error}", severity="warning" if error else "information")
 
+    # Handle the capture remote logs workflow for this component.
     @on(Button.Pressed, "#capture-remote")
     def capture_remote_logs(self) -> None:
         self.fetch_remote_logs(analyze=False)
 
+    # Prepare and run the analysis flow for remote logs.
     @on(Button.Pressed, "#analyze-remote")
     def analyze_remote_logs(self) -> None:
         if not self._is_configured():
@@ -833,18 +895,22 @@ class Elijah(App):
             return
         self.fetch_remote_logs(analyze=True)
 
+    # Handle the start remote container workflow for this component.
     @on(Button.Pressed, "#start-remote")
     def start_remote_container(self) -> None:
         self._request_remote_container_action("start")
 
+    # Handle the stop remote container workflow for this component.
     @on(Button.Pressed, "#stop-remote")
     def stop_remote_container(self) -> None:
         self._request_remote_container_action("stop")
 
+    # Handle the restart remote container workflow for this component.
     @on(Button.Pressed, "#restart-remote")
     def restart_remote_container(self) -> None:
         self._request_remote_container_action("restart")
 
+    # Prepare the requested remote container action operation and its required input.
     def _request_remote_container_action(self, action: str) -> None:
         server = self._selected_remote_server()
         container = self.selected_remote_container
@@ -856,12 +922,14 @@ class Elijah(App):
             lambda confirmed: self._confirm_remote_container_action(server.id, container, action, confirmed),
         )
 
+    # Perform the internal confirm remote container action step for this workflow.
     def _confirm_remote_container_action(
         self, server_id: str, container: str, action: str, confirmed: bool
     ) -> None:
         if confirmed:
             self.run_remote_container_action(server_id, container, action)
 
+    # Handle the run remote container action workflow for this component.
     @work(thread=True, exclusive=True, group="remote", exit_on_error=False)
     def run_remote_container_action(self, server_id: str, container: str, action: str) -> None:
         server = next((item for item in self.remote_servers if item.id == server_id), None)
@@ -874,6 +942,7 @@ class Elijah(App):
             error = str(exception)
         self.call_from_thread(self._finish_remote_container_action, server_id, container, action, error)
 
+    # Apply the completed background result for remote container action to the UI state.
     def _finish_remote_container_action(self, server_id: str, container: str, action: str, error: str) -> None:
         if error:
             self.notify(f"Could not {action} remote container: {error}", severity="error")
@@ -886,6 +955,7 @@ class Elijah(App):
         self.notify(f"Remote container {container} {action_name}.")
         self.refresh_remote_server(server_id)
 
+    # Handle the fetch remote logs workflow for this component.
     def fetch_remote_logs(self, *, analyze: bool) -> None:
         server = self._selected_remote_server()
         if not server or not self.selected_remote_container:
@@ -893,6 +963,7 @@ class Elijah(App):
             return
         self.fetch_remote_container_logs(server.id, self.selected_remote_container, analyze)
 
+    # Handle the fetch remote container logs workflow for this component.
     @work(thread=True, exclusive=True, group="remote", exit_on_error=False)
     def fetch_remote_container_logs(self, server_id: str, container: str, analyze: bool) -> None:
         server = next((item for item in self.remote_servers if item.id == server_id), None)
@@ -906,6 +977,7 @@ class Elijah(App):
             error = str(exception)
         self.call_from_thread(self._finish_remote_logs, server, container, logs, analyze, error)
 
+    # Apply the completed background result for remote logs to the UI state.
     def _finish_remote_logs(self, server: RemoteServer, container: str, logs: str, analyze: bool, error: str) -> None:
         if error:
             self.notify(f"Could not read remote logs: {error}", severity="error")
@@ -926,6 +998,7 @@ class Elijah(App):
         else:
             self.notify("Remote Docker logs saved to the local archive.")
 
+    # Remove the selected remote server and refresh persisted state.
     @on(Button.Pressed, "#delete-remote")
     def delete_remote_server(self) -> None:
         server = self._selected_remote_server()
@@ -940,35 +1013,41 @@ class Elijah(App):
         self._update_action_states()
         self.notify("Server removed from the local dashboard.")
 
+    # Remove the requested remote servers records after confirmation.
     @on(Button.Pressed, "#delete-all-remote")
     def delete_all_remote_servers(self) -> None:
         self._request_clear("remote", "saved server connections", "This only removes Elijah's local server list; no remote server is changed.")
 
     # ---- archives ----------------------------------------------------
+    # Handle selection changes for ai incident and refresh dependent controls.
     @on(DataTable.RowHighlighted, "#ai-incident-table")
     def select_ai_incident(self, event: DataTable.RowHighlighted) -> None:
         self.selected_ai_id = str(event.row_key.value)
         self._render_ai_detail()
         self._update_action_states()
 
+    # Handle the filter ai archive workflow for this component.
     @on(Select.Changed, "#ai-filter")
     def filter_ai_archive(self) -> None:
         self._fill_incidents()
         self._render_ai_detail()
         self._update_action_states()
 
+    # Handle the filter fix notes workflow for this component.
     @on(Select.Changed, "#fix-note-filter")
     def filter_fix_notes(self) -> None:
         self._fill_fix_notes()
         self._render_fix_note_detail()
         self._update_action_states()
 
+    # Handle selection changes for fix note and refresh dependent controls.
     @on(DataTable.RowHighlighted, "#fix-note-table")
     def select_fix_note(self, event: DataTable.RowHighlighted) -> None:
         self.selected_fix_note_id = str(event.row_key.value)
         self._render_fix_note_detail()
         self._update_action_states()
 
+    # Handle selection changes for event and refresh dependent controls.
     @on(DataTable.RowHighlighted, "#event-table")
     def select_event(self, event: DataTable.RowHighlighted) -> None:
         try:
@@ -978,6 +1057,7 @@ class Elijah(App):
         self._render_event_detail()
         self._update_action_states()
 
+    # Handle the ask command workflow for this component.
     @on(Button.Pressed, "#ask-command")
     def ask_command(self) -> None:
         if not self._is_configured():
@@ -989,6 +1069,7 @@ class Elijah(App):
             return
         self.push_screen(CommandQuestion(event.command), lambda question: self._create_command_question(event, question))
 
+    # Perform the internal create command question step for this workflow.
     def _create_command_question(self, event: CommandEvent, question: str | None) -> None:
         if not question:
             return
@@ -1000,23 +1081,27 @@ class Elijah(App):
         self._refresh()
         self.analyze_incident(incident.id)
 
+    # Handle the reanalyze ai button workflow for this component.
     @on(Button.Pressed, "#reanalyze-ai")
     def reanalyze_ai_button(self) -> None:
         incident = self._selected_ai()
         if incident:
             self.analyze_incident(incident.id)
 
+    # Handle the new ai investigation workflow for this component.
     @on(Button.Pressed, "#new-ai")
     def new_ai_investigation(self) -> None:
         self.query_one(TabbedContent).active = "ai-workspace"
         self.query_one("#ai-title", Input).focus()
 
+    # Handle the edit ai incident workflow for this component.
     @on(Button.Pressed, "#edit-ai")
     def edit_ai_incident(self) -> None:
         incident = self._selected_ai()
         if incident:
             self.push_screen(IncidentEditor(incident), lambda values: self._update_incident(incident.id, values))
 
+    # Apply edited values to ncident and persist the change.
     def _update_incident(self, incident_id: str, values: dict | None) -> None:
         incident = self._by_id(incident_id)
         if not incident or not values:
@@ -1028,6 +1113,7 @@ class Elijah(App):
         self._refresh()
         self.notify("Incident metadata updated.")
 
+    # Handle the resolve ai incident workflow for this component.
     @on(Button.Pressed, "#resolve-ai")
     def resolve_ai_incident(self) -> None:
         incident = self._selected_ai()
@@ -1038,6 +1124,7 @@ class Elijah(App):
         self._refresh()
         self.notify("Incident marked resolved.")
 
+    # Handle the named application action: archive.
     def action_archive(self) -> None:
         incident = self._selected_ai()
         if incident:
@@ -1045,6 +1132,7 @@ class Elijah(App):
             self._save_incidents()
             self._refresh()
 
+    # Handle the archive ai button workflow for this component.
     @on(Button.Pressed, "#archive-ai")
     def archive_ai_button(self) -> None:
         incident = self._selected_ai()
@@ -1055,6 +1143,7 @@ class Elijah(App):
         self._refresh()
         self.notify("AI investigation archived." if incident.status == "archived" else "AI investigation restored.")
 
+    # Remove the selected ai incident and refresh persisted state.
     @on(Button.Pressed, "#delete-ai")
     def delete_ai_incident(self) -> None:
         incident = self._selected_ai()
@@ -1066,16 +1155,19 @@ class Elijah(App):
         self._refresh()
         self.notify("Incident deleted.")
 
+    # Remove the requested ai incidents records after confirmation.
     @on(Button.Pressed, "#delete-all-ai")
     def delete_all_ai_incidents(self) -> None:
         self._request_clear("ai", "AI investigations", "Saved investigations and AI responses will be removed from this computer.")
 
+    # Handle the edit fix note workflow for this component.
     @on(Button.Pressed, "#edit-fix-note")
     def edit_fix_note(self) -> None:
         item = self._selected_fix_note()
         if item:
             self.push_screen(FixNoteEditor(item), lambda values: self._update_fix_note(item.id, values))
 
+    # Apply edited values to ix note and persist the change.
     def _update_fix_note(self, item_id: str, values: dict | None) -> None:
         item = next((record for record in self.fix_notes if record.id == item_id), None)
         if not item or not values:
@@ -1086,6 +1178,7 @@ class Elijah(App):
         self._refresh()
         self.notify("Fix note updated.")
 
+    # Handle the archive fix note workflow for this component.
     @on(Button.Pressed, "#archive-fix-note")
     def archive_fix_note(self) -> None:
         item = self._selected_fix_note()
@@ -1096,6 +1189,7 @@ class Elijah(App):
         self._refresh()
         self.notify("Fix note archived." if item.status == "archived" else "Fix note restored.")
 
+    # Remove the selected fix note and refresh persisted state.
     @on(Button.Pressed, "#delete-fix-note")
     def delete_fix_note(self) -> None:
         item = self._selected_fix_note()
@@ -1107,17 +1201,21 @@ class Elijah(App):
         self._refresh()
         self.notify("Fix note deleted.")
 
+    # Remove the requested fix notes records after confirmation.
     @on(Button.Pressed, "#delete-all-fix-notes")
     def delete_all_fix_notes(self) -> None:
         self._request_clear("fix-notes", "fix notes", "Your locally saved problem-and-solution notes will be removed.")
 
+    # Remove the requested events records after confirmation.
     @on(Button.Pressed, "#delete-all-events")
     def delete_all_events(self) -> None:
         self._request_clear("events", "command timeline entries", "This clears Elijah's local command metadata only; it does not affect shell history or remote servers.")
 
+    # Prepare the requested clear operation and its required input.
     def _request_clear(self, collection: str, label: str, detail: str) -> None:
         self.push_screen(ClearDataScreen(label, detail), lambda confirmed: self._clear_collection(collection, confirmed))
 
+    # Remove the requested clear collection records after confirmation.
     def _clear_collection(self, collection: str, confirmed: bool) -> None:
         if not confirmed:
             return
@@ -1150,9 +1248,11 @@ class Elijah(App):
         self.notify("Local data deleted.")
 
     # ---- AI ----------------------------------------------------------
+    # Handle the named application action: settings.
     def action_settings(self) -> None:
         self.push_screen(SettingsScreen(self.config), self._save_settings)
 
+    # Persist settings to Elijah local storage.
     def _save_settings(self, config: dict | None) -> None:
         if not config:
             return
@@ -1166,6 +1266,7 @@ class Elijah(App):
         self._refresh()
         self.notify("AI connection saved locally.")
 
+    # Prepare and run the analysis flow for incident.
     @work(thread=True, exclusive=True, group="analysis", exit_on_error=False)
     def analyze_incident(self, incident_id: str) -> None:
         incident = next((item for item in self.incidents if item.id == incident_id), None)
@@ -1181,6 +1282,7 @@ class Elijah(App):
         except Exception as error:
             self.call_from_thread(self._finish_analysis, incident_id, None, str(error))
 
+    # Prepare the requested analysis operation and its required input.
     def _request_analysis(self, incident: Incident) -> str:
         endpoint = self.config["base_url"].rstrip("/") + "/chat/completions"
         prompt = f"""You are a senior production-debugging assistant. Analyze this terminal incident.
@@ -1221,6 +1323,7 @@ Evidence:\n{incident.evidence[:24000]}
         except (KeyError, IndexError, TypeError) as error:
             raise RuntimeError("The endpoint returned an unexpected Chat Completions response.") from error
 
+    # Perform the internal set analyzing step for this workflow.
     def _set_analyzing(self, incident_id: str) -> None:
         incident = self._by_id(incident_id)
         if incident:
@@ -1228,6 +1331,7 @@ Evidence:\n{incident.evidence[:24000]}
             self._save_incidents()
             self._refresh()
 
+    # Apply the completed background result for analysis to the UI state.
     def _finish_analysis(self, incident_id: str, analysis: str | None, error: str | None) -> None:
         incident = self._by_id(incident_id)
         if not incident:
@@ -1245,6 +1349,7 @@ Evidence:\n{incident.evidence[:24000]}
         self._refresh()
 
     # ---- CLI inbox ---------------------------------------------------
+    # Handle the ingest inbox workflow for this component.
     def ingest_inbox(self) -> None:
         try:
             files = sorted(INBOX_DIR.glob("*.json"))
@@ -1277,6 +1382,7 @@ Evidence:\n{incident.evidence[:24000]}
             self.notify("Captured evidence imported from check-it.")
 
     # ---- presentation / storage -------------------------------------
+    # Perform the internal refresh step for this workflow.
     def _refresh(self) -> None:
         self._fill_incidents()
         self._fill_fix_notes()
@@ -1292,6 +1398,7 @@ Evidence:\n{incident.evidence[:24000]}
         connection = "CONNECTED" if self._is_configured() else "SETUP REQUIRED"
         self.query_one("#ai-stat", Static).update(f"AI CONNECTION\n{connection}")
 
+    # Perform the internal animate signal step for this workflow.
     def _animate_signal(self) -> None:
         frames = ("◐", "◓", "◑", "◒")
         self.pulse_frame = (self.pulse_frame + 1) % len(frames)
@@ -1299,6 +1406,7 @@ Evidence:\n{incident.evidence[:24000]}
         label = "ANALYZING" if queued else "WATCHING"
         self.query_one("#signal-stat", Static).update(f"CAPTURE STATUS\n{frames[self.pulse_frame]} {label}")
 
+    # Render incidents from the current application state.
     def _fill_incidents(self) -> None:
         table = self.query_one("#ai-incident-table", DataTable)
         table.clear()
@@ -1310,6 +1418,7 @@ Evidence:\n{incident.evidence[:24000]}
         for item in items:
             table.add_row(self._short(item.title, 42), item.source, item.status, self._age(item.created), key=item.id)
 
+    # Render fix notes from the current application state.
     def _fill_fix_notes(self) -> None:
         table = self.query_one("#fix-note-table", DataTable)
         table.clear()
@@ -1321,6 +1430,7 @@ Evidence:\n{incident.evidence[:24000]}
         for item in items:
             table.add_row(self._short(item.title, 38), self._short(item.command or "manual note", 26), item.status, self._age(item.created), key=item.id)
 
+    # Perform the internal filtered incidents step for this workflow.
     def _filtered_incidents(self, filter_value: str) -> list[Incident]:
         if filter_value == "all":
             return self.incidents
@@ -1328,6 +1438,7 @@ Evidence:\n{incident.evidence[:24000]}
             return [item for item in self.incidents if item.status not in {"archived", "resolved"}]
         return [item for item in self.incidents if item.status == filter_value]
 
+    # Render events from the current application state.
     def _fill_events(self) -> None:
         table = self.query_one("#event-table", DataTable)
         table.clear()
@@ -1336,6 +1447,7 @@ Evidence:\n{incident.evidence[:24000]}
             table.add_row(self._short(item.command, 54), exit_value, f"{item.duration_ms} ms", self._short(item.cwd, 30), self._age(item.created), key=f"event-{index}")
         self._render_event_detail()
 
+    # Render docker targets from the current application state.
     def _fill_docker_targets(self) -> None:
         if not self.query("#docker-table"):
             return
@@ -1350,6 +1462,7 @@ Evidence:\n{incident.evidence[:24000]}
             table.add_row(self._short(target.name, 25), self._short(compose, 22), state, health, restarts, key=target.id)
         self._render_docker_detail()
 
+    # Render docker detail from the current application state.
     def _render_docker_detail(self) -> None:
         if not self.query("#docker-detail-content"):
             return
@@ -1376,6 +1489,7 @@ Evidence:\n{incident.evidence[:24000]}
             + (f"[b red]DOCKER ERROR[/]\n{snapshot.error}" if snapshot.error else "")
         )
 
+    # Render remote servers from the current application state.
     def _fill_remote_servers(self, error: str = "") -> None:
         if not self.query("#remote-server-table"):
             return
@@ -1390,6 +1504,7 @@ Evidence:\n{incident.evidence[:24000]}
             container_table.add_row(container.name, container.state, self._short(container.image, 28), key=container.name)
         self._render_remote_detail(error)
 
+    # Render remote detail from the current application state.
     def _render_remote_detail(self, error: str = "") -> None:
         if not self.query("#remote-detail-content"):
             return
@@ -1408,21 +1523,25 @@ Evidence:\n{incident.evidence[:24000]}
             "[dim]SSH keys or an SSH agent are required. Elijah never stores a server password.[/]"
         )
 
+    # Return the currently selected event when one is available.
     def _selected_event(self) -> CommandEvent | None:
         if self.selected_event_index is None or self.selected_event_index >= len(self.events):
             return None
         return self.events[self.selected_event_index]
 
+    # Return the currently selected docker target when one is available.
     def _selected_docker_target(self) -> DockerTarget | None:
         if self.selected_docker_id:
             return next((item for item in self.docker_targets if item.id == self.selected_docker_id), None)
         return self.docker_targets[0] if self.docker_targets else None
 
+    # Return the currently selected remote server when one is available.
     def _selected_remote_server(self) -> RemoteServer | None:
         if self.selected_remote_id:
             return next((item for item in self.remote_servers if item.id == self.selected_remote_id), None)
         return self.remote_servers[0] if self.remote_servers else None
 
+    # Apply edited values to ction states and persist the change.
     def _update_action_states(self) -> None:
         """Keep contextual actions quiet until their required record is available."""
         ai_selected = self._selected_ai() is not None
@@ -1460,11 +1579,13 @@ Evidence:\n{incident.evidence[:24000]}
             not container_selected,
         )
 
+    # Perform the internal set buttons disabled step for this workflow.
     def _set_buttons_disabled(self, button_ids: tuple[str, ...], disabled: bool) -> None:
         for button_id in button_ids:
             for button in self.query(f"#{button_id}"):
                 button.disabled = disabled
 
+    # Render event detail from the current application state.
     def _render_event_detail(self) -> None:
         if not self.query("#event-content"):
             return
@@ -1476,6 +1597,7 @@ Evidence:\n{incident.evidence[:24000]}
         result = "[green]Succeeded[/]" if event.exit_code == 0 else f"[red]Failed (exit {event.exit_code})[/]"
         detail.update(f"[b #f1f4ff]{event.command}[/]\n\n{result}\n[dim]{event.cwd}\n{event.duration_ms} ms · {self._age(event.created)}[/]\n\nAsk AI to explain the command, identify risks, propose a safer form, or adapt it to your goal.\n\n[dim]To include stdout/stderr, run commands inside elijah-shell; a full transcript is archived when that session ends.[/]")
 
+    # Render ai detail from the current application state.
     def _render_ai_detail(self) -> None:
         if not self.query("#ai-detail-content"):
             return
@@ -1489,6 +1611,7 @@ Evidence:\n{incident.evidence[:24000]}
         command = f"[b #64d9ff]COMMAND / CONTEXT[/]\n{incident.command}\n\n" if incident.command else ""
         detail.update(f"[b #f1f4ff]{incident.title}[/]\n[dim]{incident.source} · {self._age(incident.created)} · {incident.status}[/]\n\n{command}[b #64d9ff]EVIDENCE[/]\n{self._short(incident.evidence, 1800)}\n\n[b #7de2d1]AI INVESTIGATION[/]\n{incident.analysis or '[dim]No AI response yet.[/]'}")
 
+    # Render fix note detail from the current application state.
     def _render_fix_note_detail(self) -> None:
         if not self.query("#fix-note-detail-content"):
             return
@@ -1504,28 +1627,35 @@ Evidence:\n{incident.evidence[:24000]}
         tags = f" · {', '.join(item.tags)}" if item.tags else ""
         detail.update(f"[b #f1f4ff]{item.title}[/]\n[dim]{self._age(item.created)} · {item.status}{tags}[/]\n\n{command}[b #ffcc80]WHAT FAILED[/]\n{item.failure}\n\n[b #7de2d1]WHAT FIXED IT[/]\n{item.resolution}{prevention}")
 
+    # Return the currently selected ai when one is available.
     def _selected_ai(self) -> Incident | None:
         return self._by_id(self.selected_ai_id) if self.selected_ai_id else (self.incidents[0] if self.incidents else None)
 
+    # Return the currently selected fix note when one is available.
     def _selected_fix_note(self) -> FixNote | None:
         return next((item for item in self.fix_notes if item.id == self.selected_fix_note_id), None) if self.selected_fix_note_id else (self.fix_notes[0] if self.fix_notes else None)
 
+    # Perform the internal by id step for this workflow.
     def _by_id(self, incident_id: str | None) -> Incident | None:
         return next((item for item in self.incidents if item.id == incident_id), None)
 
+    # Perform the internal is configured step for this workflow.
     def _is_configured(self) -> bool:
         return all(self.config.get(key) for key in ("base_url", "model", "api_key"))
 
+    # Load incidents from local storage with a safe fallback.
     def _load_incidents(self) -> list[Incident]:
         try:
             return [Incident(**item) for item in json.loads(INCIDENTS_FILE.read_text())]
         except (OSError, json.JSONDecodeError, TypeError):
             return []
 
+    # Persist incidents to Elijah local storage.
     def _save_incidents(self) -> None:
         APP_DIR.mkdir(parents=True, exist_ok=True)
         INCIDENTS_FILE.write_text(json.dumps([asdict(item) for item in self.incidents], ensure_ascii=False, indent=2))
 
+    # Load fix notes from local storage with a safe fallback.
     @staticmethod
     def _load_fix_notes() -> list[FixNote]:
         try:
@@ -1533,20 +1663,24 @@ Evidence:\n{incident.evidence[:24000]}
         except (OSError, json.JSONDecodeError, TypeError):
             return []
 
+    # Persist fix notes to Elijah local storage.
     def _save_fix_notes(self) -> None:
         APP_DIR.mkdir(parents=True, exist_ok=True)
         FIX_NOTES_FILE.write_text(json.dumps([asdict(item) for item in self.fix_notes], ensure_ascii=False, indent=2))
 
+    # Load events from local storage with a safe fallback.
     def _load_events(self) -> list[CommandEvent]:
         try:
             return [CommandEvent(**item) for item in json.loads(EVENTS_FILE.read_text())]
         except (OSError, json.JSONDecodeError, TypeError):
             return []
 
+    # Persist events to Elijah local storage.
     def _save_events(self) -> None:
         APP_DIR.mkdir(parents=True, exist_ok=True)
         EVENTS_FILE.write_text(json.dumps([asdict(item) for item in self.events], ensure_ascii=False, indent=2))
 
+    # Load docker targets from local storage with a safe fallback.
     @staticmethod
     def _load_docker_targets() -> list[DockerTarget]:
         try:
@@ -1554,12 +1688,14 @@ Evidence:\n{incident.evidence[:24000]}
         except (OSError, json.JSONDecodeError, TypeError):
             return []
 
+    # Persist docker targets to Elijah local storage.
     def _save_docker_targets(self) -> None:
         APP_DIR.mkdir(parents=True, exist_ok=True)
         DOCKER_TARGETS_FILE.write_text(
             json.dumps([asdict(item) for item in self.docker_targets], ensure_ascii=False, indent=2)
         )
 
+    # Load remote servers from local storage with a safe fallback.
     @staticmethod
     def _load_remote_servers() -> list[RemoteServer]:
         try:
@@ -1567,12 +1703,14 @@ Evidence:\n{incident.evidence[:24000]}
         except (OSError, json.JSONDecodeError, TypeError):
             return []
 
+    # Persist remote servers to Elijah local storage.
     def _save_remote_servers(self) -> None:
         APP_DIR.mkdir(parents=True, exist_ok=True)
         REMOTE_SERVERS_FILE.write_text(
             json.dumps([asdict(item) for item in self.remote_servers], ensure_ascii=False, indent=2)
         )
 
+    # Load config from local storage with a safe fallback.
     @staticmethod
     def _load_config() -> dict:
         try:
@@ -1585,6 +1723,7 @@ Evidence:\n{incident.evidence[:24000]}
                 config[key] = os.environ[variable]
         return config
 
+    # Perform the internal infer title step for this workflow.
     @staticmethod
     def _infer_title(evidence: str, command: str) -> str:
         for line in evidence.splitlines():
@@ -1592,10 +1731,12 @@ Evidence:\n{incident.evidence[:24000]}
                 return line.strip()[:100]
         return (command or "Captured terminal incident")[:100]
 
+    # Perform the internal short step for this workflow.
     @staticmethod
     def _short(value: str, limit: int) -> str:
         return value if len(value) <= limit else value[: limit - 1] + "…"
 
+    # Perform the internal age step for this workflow.
     @staticmethod
     def _age(timestamp: float) -> str:
         seconds = max(0, int(time.time() - timestamp))
@@ -1605,6 +1746,7 @@ Evidence:\n{incident.evidence[:24000]}
         return f"{seconds // 86_400}d ago"
 
 
+# Handle the install zsh workflow for this component.
 def install_zsh() -> None:
     """Install the zsh template; its source lives in elijah_shells/zsh.zsh."""
     APP_DIR.mkdir(parents=True, exist_ok=True)
@@ -1622,6 +1764,7 @@ def install_zsh() -> None:
     print("Default: failures only. For all commands: export ELIJAH_CAPTURE=all")
 
 
+# Handle the uninstall zsh workflow for this component.
 def uninstall_zsh() -> None:
     """Remove only Elijah's marked block from .zshrc; leave all other config intact."""
     zshrc = Path.home() / ".zshrc"
@@ -1638,6 +1781,7 @@ def uninstall_zsh() -> None:
     print("Elijah shell integration removed. Restart zsh or run: source ~/.zshrc")
 
 
+# Run the command-line entrypoint and dispatch the requested workflow.
 def main() -> None:
     if len(sys.argv) >= 2 and sys.argv[1] == "install-shell":
         shell = sys.argv[sys.argv.index("--shell") + 1] if "--shell" in sys.argv and len(sys.argv) > sys.argv.index("--shell") + 1 else detect_shell()

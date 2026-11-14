@@ -10,6 +10,7 @@ from pathlib import Path
 from check_it import queue_capture
 
 
+# Run the command-line entrypoint and dispatch the requested workflow.
 def main() -> None:
     shell = os.environ.get("SHELL", "/bin/zsh")
     sessions = Path.home() / ".elijah-investigator" / "sessions"
@@ -26,6 +27,7 @@ def main() -> None:
     raise SystemExit(code)
 
 
+# Handle the shutil which workflow for this component.
 def shutil_which(name: str) -> str | None:
     for directory in os.environ.get("PATH", "").split(os.pathsep):
         candidate = Path(directory) / name

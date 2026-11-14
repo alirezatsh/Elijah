@@ -13,6 +13,7 @@ SHELL_FILES = {
 }
 
 
+# Handle the detect shell workflow for this component.
 def detect_shell() -> str:
     shell = Path(os.environ.get("SHELL", "")).name.lower()
     if shell in {"zsh", "bash", "fish"}:
@@ -20,6 +21,7 @@ def detect_shell() -> str:
     return "bash"
 
 
+# Handle the install workflow for this component.
 def install(shell: str, check_it: str) -> None:
     """Install a non-zsh hook; zsh has its dedicated installer in elijah.py."""
     if shell not in SHELL_FILES:
@@ -33,6 +35,7 @@ def install(shell: str, check_it: str) -> None:
     print(f"Elijah {shell} integration installed in {rc_file}. Restart that shell to activate it.")
 
 
+# Handle the uninstall workflow for this component.
 def uninstall(shell: str) -> None:
     if shell not in SHELL_FILES:
         raise ValueError(f"Unsupported shell: {shell}")
@@ -49,6 +52,7 @@ def uninstall(shell: str) -> None:
     print(f"Elijah {shell} integration removed. Restart that shell.")
 
 
+# Perform the internal add source block step for this workflow.
 def _add_source_block(rc_file: Path, integration: Path) -> None:
     rc_file.parent.mkdir(parents=True, exist_ok=True)
     existing = rc_file.read_text() if rc_file.exists() else ""

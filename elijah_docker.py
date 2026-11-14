@@ -28,11 +28,13 @@ class DockerSnapshot:
     logs: str = ""
     error: str = ""
 
+    # Handle the is healthy workflow for this component.
     @property
     def is_healthy(self) -> bool:
         return self.status == "running" and self.health not in {"unhealthy", "none"}
 
 
+# Perform the internal run step for this workflow.
 def _run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
     try:
         return subprocess.run(args, cwd=cwd, text=True, capture_output=True, check=False)
@@ -40,6 +42,7 @@ def _run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedPro
         raise DockerError("Docker CLI is not installed or is not available on PATH.") from error
 
 
+# Perform the internal compose container id step for this workflow.
 def _compose_container_id(target: DockerTarget) -> str:
     """Resolve a Compose service to its current container ID when possible."""
     if not target.compose_file:
@@ -52,6 +55,7 @@ def _compose_container_id(target: DockerTarget) -> str:
     return result.stdout.strip().splitlines()[0] if result.returncode == 0 and result.stdout.strip() else ""
 
 
+# Perform the internal inspect step for this workflow.
 def _inspect(reference: str) -> dict:
     result = _run(["docker", "inspect", reference])
     if result.returncode != 0:
@@ -64,6 +68,7 @@ def _inspect(reference: str) -> dict:
         raise DockerError("Docker returned an unexpected inspect response.") from error
 
 
+# Handle the read snapshot workflow for this component.
 def read_snapshot(target: DockerTarget, *, include_logs: bool = False, tail: int = 300) -> DockerSnapshot:
     """Inspect a target and optionally collect a bounded tail of combined logs."""
     reference = _compose_container_id(target) or target.name
@@ -93,6 +98,7 @@ def read_snapshot(target: DockerTarget, *, include_logs: bool = False, tail: int
     )
 
 
+# Handle the manage container workflow for this component.
 def manage_container(target: DockerTarget, action: str) -> DockerSnapshot:
     """Apply one explicit lifecycle action, then return the updated Docker state."""
     if action not in CONTAINER_ACTIONS:
@@ -105,6 +111,7 @@ def manage_container(target: DockerTarget, action: str) -> DockerSnapshot:
     return read_snapshot(target)
 
 
+# Handle the describe snapshot workflow for this component.
 def describe_snapshot(snapshot: DockerSnapshot, *, include_logs: bool = False) -> str:
     """Create bounded, AI-ready evidence without claiming that logs were analyzed locally."""
     lines = [

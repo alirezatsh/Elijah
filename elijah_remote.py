@@ -25,6 +25,7 @@ class RemoteContainer:
     container_id: str
 
 
+# Perform the internal ssh args step for this workflow.
 def _ssh_args(server: RemoteServer, command: str) -> list[str]:
     args = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", "-p", str(server.port)]
     if server.identity_file:
@@ -33,6 +34,7 @@ def _ssh_args(server: RemoteServer, command: str) -> list[str]:
     return args
 
 
+# Perform the internal run step for this workflow.
 def _run(server: RemoteServer, command: str) -> str:
     try:
         result = subprocess.run(_ssh_args(server, command), text=True, capture_output=True, check=False)
@@ -44,6 +46,7 @@ def _run(server: RemoteServer, command: str) -> str:
     return result.stdout
 
 
+# Handle the list containers workflow for this component.
 def list_containers(server: RemoteServer) -> list[RemoteContainer]:
     """List Docker containers without opening a shell on the remote host."""
     output = _run(server, "docker ps -a --format '{{.Names}}\\t{{.Status}}\\t{{.Image}}\\t{{.ID}}'")
@@ -55,12 +58,14 @@ def list_containers(server: RemoteServer) -> list[RemoteContainer]:
     return containers
 
 
+# Handle the read container logs workflow for this component.
 def read_container_logs(server: RemoteServer, name: str, *, tail: int = 300) -> str:
     """Read a bounded, timestamped log tail for one remote container."""
     safe_name = shlex.quote(name)
     return _run(server, f"docker logs --tail {tail} --timestamps {safe_name} 2>&1")
 
 
+# Handle the manage container workflow for this component.
 def manage_container(server: RemoteServer, name: str, action: str) -> str:
     """Apply one explicit lifecycle action to a remote Docker container over SSH."""
     if action not in CONTAINER_ACTIONS:
