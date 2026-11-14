@@ -1,8 +1,7 @@
-"""SSH-backed Docker inspection and event sync for remote Elijah servers."""
+"""SSH-backed Docker inspection for remote Elijah servers."""
 
 from __future__ import annotations
 
-import json
 import shlex
 import subprocess
 from dataclasses import dataclass
@@ -67,15 +66,3 @@ def manage_container(server: RemoteServer, name: str, action: str) -> str:
     if action not in CONTAINER_ACTIONS:
         raise RemoteError(f"Unsupported container action: {action}")
     return _run(server, f"docker {action} {shlex.quote(name)}")
-
-
-def read_command_events(server: RemoteServer) -> list[dict]:
-    """Pull a remote Elijah command timeline into the central local dashboard."""
-    output = _run(server, "cat ~/.elijah-investigator/command-events.json 2>/dev/null || printf '[]'")
-    try:
-        events = json.loads(output)
-    except json.JSONDecodeError as error:
-        raise RemoteError("Remote Elijah command timeline is not valid JSON.") from error
-    if not isinstance(events, list):
-        raise RemoteError("Remote Elijah command timeline has an unexpected format.")
-    return [event for event in events if isinstance(event, dict)]

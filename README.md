@@ -176,11 +176,9 @@ Docker log output can contain secrets. Review your container logging policy and 
 
 ## Central dashboard for remote servers
 
-The **Servers** tab connects to Linux servers through the local OpenSSH client. Add a label, host or IP address, SSH user, port, and optionally a local private-key path. Elijah verifies the connection before saving a server, then lists that server's Docker containers. Select a server first, then use **Sync this server's commands** to import only that server's Elijah timeline; its commands appear in the dedicated **This server's commands** table in the same panel. Select a remote container to capture or analyze its latest 300 log lines in the same local archive. The selected-container controls can Start, Stop, or Restart it over SSH, with a confirmation dialog before each action.
+The **Servers** tab connects to Linux servers through the local OpenSSH client. Add a label, host or IP address, SSH user, port, and optionally a local private-key path. Elijah verifies the connection before saving a server, then lists that server's Docker containers. Select a remote container to capture or analyze its latest 300 log lines in the same local archive. The selected-container controls can Start, Stop, or Restart it over SSH, with a confirmation dialog before each action.
 
-For security, Elijah does not store SSH passwords. Use an SSH key, an entry in `~/.ssh/config`, or a running SSH agent. The remote account needs permission to run `docker ps`, `docker logs`, `docker start`, `docker stop`, `docker restart`, and to read its own `~/.elijah-investigator/command-events.json` file.
-
-To centralize commands run on a remote server, install Elijah on that server, enable its shell integration, select that server in the local dashboard, and then choose **Sync this server's commands**. Elijah pulls only that server's command metadata into the local timeline; remote logs are fetched only when you explicitly capture or analyze a selected remote container.
+For security, Elijah does not store SSH passwords. Use an SSH key, an entry in `~/.ssh/config`, or a running SSH agent. The remote account needs permission to run `docker ps`, `docker logs`, `docker start`, `docker stop`, and `docker restart`.
 
 ## Clear local data
 

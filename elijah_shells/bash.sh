@@ -7,7 +7,9 @@ __elijah_precmd() {
   local exit_code=$? now duration_ms=0
   [[ -z "$__elijah_command" || "${ELIJAH_CAPTURE:-fail}" == off ]] && { __elijah_command=""; return; }
   now=$(date +%s%3N); duration_ms=$((now-__elijah_started))
-  [[ "${ELIJAH_CAPTURE:-fail}" == all || $exit_code -ne 0 ]] && "$ELIJAH_CHECK_IT" hook --command "$__elijah_command" --cwd "$PWD" --exit-code "$exit_code" --duration-ms "$duration_ms" --capture all >/dev/null 2>&1 &
+  if [[ "${ELIJAH_CAPTURE:-fail}" == all || $exit_code -ne 0 ]]; then
+    "$ELIJAH_CHECK_IT" hook --command "$__elijah_command" --cwd "$PWD" --exit-code "$exit_code" --duration-ms "$duration_ms" --capture all >/dev/null 2>&1 & disown
+  fi
   __elijah_command=""
 }
 trap '__elijah_preexec' DEBUG

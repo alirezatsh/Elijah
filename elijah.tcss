@@ -81,7 +81,6 @@ DataTable > .datatable--cursor { background: #2b4a78; color: white; }
 #remote-server-table, #remote-container-table { height: 1fr; background: $elijah-surface; border: round #29436d; }
 #remote-detail { width: 1fr; height: 1fr; margin-left: 1; padding: 1 2; background: $elijah-surface; border: round #29436d; overflow-y: auto; }
 #remote-detail-content { height: 8; overflow-y: auto; color: #dbe4f8; }
-#remote-event-table { height: 1fr; background: $elijah-surface; border: round #29436d; }
 #remote-server-actions, #remote-danger-actions, #remote-primary-actions, #remote-control-actions {
     height: auto; margin-top: 1; grid-size: 2; grid-gutter: 1 1;
 }

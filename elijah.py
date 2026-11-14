@@ -13,7 +13,7 @@ from uuid import uuid4
 from shell_setup import detect_shell, install as install_other_shell, uninstall as uninstall_other_shell
 from elijah_docker import DockerError, DockerSnapshot, describe_snapshot, manage_container as manage_local_container, read_snapshot
 from elijah_models import CommandEvent, DockerTarget, FixNote, Incident, RemoteServer
-from elijah_remote import RemoteContainer, RemoteError, list_containers, manage_container as manage_remote_container, read_command_events, read_container_logs
+from elijah_remote import RemoteContainer, RemoteError, list_containers, manage_container as manage_remote_container, read_container_logs
 
 from textual import on, work
 from textual.app import App, ComposeResult
@@ -402,7 +402,7 @@ class Elijah(App):
                     yield Input("22", placeholder="Port", id="remote-port")
                     yield Input(placeholder="Optional SSH private-key path", id="remote-key")
                     yield Button("Connect", id="save-remote", variant="success")
-                yield Static("Use SSH keys or your local SSH agent. Elijah does not store server passwords. Select a server to list its Docker containers or sync its Elijah command timeline.", id="remote-guide")
+                yield Static("Use SSH keys or your local SSH agent. Elijah does not store server passwords. Select a server to list and manage its Docker containers.", id="remote-guide")
                 with Horizontal(id="remote-layout"):
                     with Vertical(id="remote-server-list"):
                         yield DataTable(id="remote-server-table", cursor_type="row")
@@ -413,12 +413,9 @@ class Elijah(App):
                         yield Static("Add a server to connect over SSH.", id="remote-detail-content")
                         yield Label("SERVER", classes="action-group-label")
                         with Grid(id="remote-server-actions"):
-                            yield Button("Sync commands", id="sync-remote", variant="success")
                             yield Button("Remove server", id="delete-remote", variant="error")
                         with Grid(id="remote-danger-actions"):
                             yield Button("Clear servers", id="delete-all-remote", variant="error")
-                        yield Label("THIS SERVER'S COMMANDS", classes="action-label")
-                        yield DataTable(id="remote-event-table", cursor_type="row")
                         yield Label("SELECTED CONTAINER", classes="action-group-label")
                         with Grid(id="remote-primary-actions"):
                             yield Button("Refresh", id="refresh-remote")
@@ -470,7 +467,6 @@ class Elijah(App):
         self.query_one("#docker-table", DataTable).add_columns("Container", "Compose", "State", "Health", "Restarts")
         self.query_one("#remote-server-table", DataTable).add_columns("Server", "Address", "Status")
         self.query_one("#remote-container-table", DataTable).add_columns("Container", "State", "Image")
-        self.query_one("#remote-event-table", DataTable).add_columns("Command", "Exit", "When")
         self.incidents = self._load_incidents()
         self.fix_notes = self._load_fix_notes()
         self.events = self._load_events()
@@ -826,50 +822,6 @@ class Elijah(App):
         self._update_action_states()
         self.notify("Remote Docker state refreshed." if not error else f"Remote Docker unavailable: {error}", severity="warning" if error else "information")
 
-    @on(Button.Pressed, "#sync-remote")
-    def sync_remote_button(self) -> None:
-        server = self._selected_remote_server()
-        if server:
-            self.sync_remote_events(server.id)
-
-    @work(thread=True, exclusive=True, group="remote", exit_on_error=False)
-    def sync_remote_events(self, server_id: str) -> None:
-        server = next((item for item in self.remote_servers if item.id == server_id), None)
-        if not server:
-            return
-        try:
-            events = read_command_events(server)
-            error = ""
-        except RemoteError as exception:
-            events = []
-            error = str(exception)
-        self.call_from_thread(self._finish_remote_sync, server, events, error)
-
-    def _finish_remote_sync(self, server: RemoteServer, events: list[dict], error: str) -> None:
-        if error:
-            self.notify(f"Could not sync remote commands: {error}", severity="error")
-            return
-        fingerprints = {(event.command, event.cwd, event.created) for event in self.events}
-        imported = 0
-        for event in events:
-            try:
-                command = str(event["command"])
-                cwd = f"{server.name}:{event['cwd']}"
-                created = float(event["created"])
-                fingerprint = (command, cwd, created)
-                if fingerprint in fingerprints:
-                    continue
-                self.events.append(CommandEvent(command, cwd, int(event["exit_code"]), int(event["duration_ms"]), created))
-                fingerprints.add(fingerprint)
-                imported += 1
-            except (KeyError, TypeError, ValueError):
-                continue
-        self.events.sort(key=lambda event: event.created, reverse=True)
-        self.events = self.events[:2000]
-        self._save_events()
-        self._refresh()
-        self.notify(f"Synced {imported} new command events from {server.name}.")
-
     @on(Button.Pressed, "#capture-remote")
     def capture_remote_logs(self) -> None:
         self.fetch_remote_logs(analyze=False)
@@ -1161,7 +1113,7 @@ class Elijah(App):
 
     @on(Button.Pressed, "#delete-all-events")
     def delete_all_events(self) -> None:
-        self._request_clear("events", "command timeline entries", "This clears local and imported remote command metadata only; it does not affect shell history or remote servers.")
+        self._request_clear("events", "command timeline entries", "This clears Elijah's local command metadata only; it does not affect shell history or remote servers.")
 
     def _request_clear(self, collection: str, label: str, detail: str) -> None:
         self.push_screen(ClearDataScreen(label, detail), lambda confirmed: self._clear_collection(collection, confirmed))
@@ -1437,20 +1389,6 @@ Evidence:\n{incident.evidence[:24000]}
         for container in self.remote_containers:
             container_table.add_row(container.name, container.state, self._short(container.image, 28), key=container.name)
         self._render_remote_detail(error)
-        self._fill_remote_events()
-
-    def _fill_remote_events(self) -> None:
-        if not self.query("#remote-event-table"):
-            return
-        table = self.query_one("#remote-event-table", DataTable)
-        table.clear()
-        server = self._selected_remote_server()
-        if not server:
-            return
-        prefix = f"{server.name}:"
-        for index, item in enumerate(event for event in self.events if event.cwd.startswith(prefix)):
-            exit_value = "[green]0[/]" if item.exit_code == 0 else f"[red]{item.exit_code}[/]"
-            table.add_row(self._short(item.command, 32), exit_value, self._age(item.created), key=f"remote-event-{index}")
 
     def _render_remote_detail(self, error: str = "") -> None:
         if not self.query("#remote-detail-content"):
@@ -1467,7 +1405,7 @@ Evidence:\n{incident.evidence[:24000]}
             f"[b #f1f4ff]{server.name}[/]\n[dim]{server.user}@{server.host}:{server.port}[/]\n\n"
             f"[b #64d9ff]DOCKER CONTAINERS[/]\n{len(self.remote_containers)} listed"
             f"{container}{problem}\n\n"
-            "[dim]Sync this server's commands updates the timeline below. It only imports this selected server's local Elijah command metadata. SSH keys or an SSH agent are required.[/]"
+            "[dim]SSH keys or an SSH agent are required. Elijah never stores a server password.[/]"
         )
 
     def _selected_event(self) -> CommandEvent | None:
@@ -1512,7 +1450,7 @@ Evidence:\n{incident.evidence[:24000]}
             not docker_selected,
         )
         self._set_buttons_disabled(("delete-all-docker",), not bool(self.docker_targets))
-        self._set_buttons_disabled(("sync-remote", "delete-remote", "refresh-remote"), not server_selected)
+        self._set_buttons_disabled(("delete-remote", "refresh-remote"), not server_selected)
         self._set_buttons_disabled(("delete-all-remote",), not bool(self.remote_servers))
         self._set_buttons_disabled(
             (
