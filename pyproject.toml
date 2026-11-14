@@ -5,11 +5,9 @@ description = "A local-first, AI-assisted terminal incident investigator"
 requires-python = ">=3.10"
 dependencies = ["textual>=1.0.0"]
 readme = "README.md"
-license = {file = "LICENSE"}
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Console",
-  "License :: OSI Approved :: MIT License",
   "Operating System :: MacOS",
   "Operating System :: POSIX :: Linux",
   "Programming Language :: Python :: 3",
