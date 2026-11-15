@@ -27,6 +27,8 @@ Elijah is a terminal incident workspace for deliberate requests to any OpenAI-co
 
 ## Install globally
 
+`requirements.txt` is included for a quick local dependency install, but `pyproject.toml` remains intentionally. It gives `pip` and `pipx` the package name and defines the global commands (`elijah`, `check-it`, and `elijah-shell`). A requirements file can list Textual, but by itself it cannot create those commands. For the simplest global setup, use `pipx install .` below.
+
 ### From GitHub source
 
 ```bash
@@ -69,6 +71,17 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install .
 elijah
+```
+
+### Quick local dependency install
+
+If you only want to run the interface from the project folder, without installing global commands:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python elijah.py
 ```
 
 ## AI investigations and fix notes
@@ -168,7 +181,7 @@ Run the commands you are investigating inside that shell. When it exits, Elijah 
 
 Open **Container watchlist** in Elijah and enter either a container name or a Compose service name. A Compose file path is optional; when supplied, Elijah resolves the service through `docker compose -f <file> ps --all --quiet <service>`, so stopped Compose containers can be started as well.
 
-The watchlist is stored locally. **Refresh** reads Docker state, health-check status, restart count, and image metadata without reading logs. **Capture logs** saves the latest 300 timestamped log lines as a local captured incident. **Analyze logs** reads the same bounded log tail, creates an incident, and sends it to the configured AI provider only after you explicitly choose that button.
+The watchlist is stored locally. **Refresh** reads Docker state, health-check status, restart count, and image metadata without reading logs. **Capture logs** saves the latest 300 timestamped log lines as a local captured incident. **Analyze** first asks what you want AI to investigate; only after you submit that question does it read the bounded log tail and send the selected evidence to the configured AI provider.
 
 The same panel can **Start**, **Stop**, or **Restart** the selected local container. Each lifecycle action opens a confirmation dialog before Elijah sends the Docker command; it does not remove containers, images, volumes, or networks.
 

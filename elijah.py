@@ -17,7 +17,7 @@ from elijah_remote import RemoteContainer, RemoteError, list_containers, manage_
 
 from textual import on, work
 from textual.app import App, ComposeResult
-from textual.containers import Container, Grid, Horizontal, Vertical
+from textual.containers import Container, Grid, Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import Button, DataTable, Footer, Header, Input, Label, Select, Static, TabbedContent, TabPane, TextArea
 
@@ -128,6 +128,49 @@ class CommandQuestion(ModalScreen[str | None]):
             self.dismiss(question)
         else:
             self.notify("Write a question first.", severity="warning")
+
+
+class ContainerAnalysisQuestion(ModalScreen[str | None]):
+    """Collect the user's diagnostic goal before Docker logs are sent to AI."""
+
+    BINDINGS = [("escape", "cancel", "Cancel")]
+    CSS = """
+    ContainerAnalysisQuestion { align: center middle; background: rgba(3, 7, 15, 0.82); }
+    #container-question { width: 78; height: auto; border: heavy #7de2d1; background: #10192e; padding: 1 2; }
+    #container-question Input { margin: 1 0; }
+    #container-question-actions { height: auto; grid-size: 2; grid-gutter: 1 1; }
+    #container-question-actions Button { width: 1fr; }
+    """
+
+    def __init__(self, container_name: str) -> None:
+        super().__init__()
+        self.container_name = container_name
+
+    def compose(self) -> ComposeResult:
+        with Container(id="container-question"):
+            yield Label("ASK AI ABOUT CONTAINER LOGS")
+            yield Static(f"Container: [b]{self.container_name}[/]")
+            yield Input(
+                placeholder="e.g. Why is it restarting, and what should I check first?",
+                id="container-analysis-question",
+            )
+            with Grid(id="container-question-actions"):
+                yield Button("Cancel", id="cancel")
+                yield Button("Analyze logs", id="analyze", variant="success")
+
+    @on(Button.Pressed)
+    def submit(self, event: Button.Pressed) -> None:
+        if event.button.id == "cancel":
+            self.dismiss(None)
+            return
+        question = self.query_one("#container-analysis-question", Input).value.strip()
+        if not question:
+            self.notify("Write the analysis question first.", severity="warning")
+            return
+        self.dismiss(question)
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
 
 
 class ContainerActionScreen(ModalScreen[bool]):
@@ -373,7 +416,8 @@ class Elijah(App):
                         yield DataTable(id="ai-incident-table", cursor_type="row")
                     with Vertical(id="detail"):
                         yield Label("AI INVESTIGATION", id="ai-detail-label")
-                        yield Static("Select an AI investigation to inspect it.", id="ai-detail-content")
+                        with VerticalScroll(id="ai-detail-scroll"):
+                            yield Static("Select an AI investigation to inspect it.", id="ai-detail-content")
                         yield Label("ARCHIVE CONTROLS", classes="action-label")
                         with Grid(id="ai-primary-actions"):
                             yield Button("New", id="new-ai", variant="success")
@@ -477,7 +521,8 @@ class Elijah(App):
                         yield DataTable(id="fix-note-table", cursor_type="row")
                     with Vertical(id="detail"):
                         yield Label("SAVED LESSON", id="fix-note-detail-label")
-                        yield Static("Select a fix note to inspect the failure and its proven resolution.", id="fix-note-detail-content")
+                        with VerticalScroll(id="fix-note-detail-scroll"):
+                            yield Static("Select a fix note to inspect the failure and its proven resolution.", id="fix-note-detail-content")
                         with Grid(id="detail-actions"):
                             yield Button("Edit", id="edit-fix-note")
                             yield Button("Archive", id="archive-fix-note")
@@ -649,7 +694,17 @@ class Elijah(App):
             return
         target = self._selected_docker_target()
         if target:
-            self.refresh_docker_target(target.id, include_logs=True, action="analyze")
+            self.push_screen(
+                ContainerAnalysisQuestion(target.name),
+                lambda question: self._analyze_docker_with_question(target.id, question),
+            )
+
+    def _analyze_docker_with_question(self, target_id: str, question: str | None) -> None:
+        """Read logs only after the user states the question for this investigation."""
+        if question:
+            self.refresh_docker_target(
+                target_id, include_logs=True, action="analyze", question=question
+            )
 
     # Handle the start docker workflow for this component.
     @on(Button.Pressed, "#start-docker")
@@ -735,15 +790,19 @@ class Elijah(App):
 
     # Refresh docker target and update the visible state.
     @work(thread=True, exclusive=True, group="docker", exit_on_error=False)
-    def refresh_docker_target(self, target_id: str, *, include_logs: bool, action: str) -> None:
+    def refresh_docker_target(
+        self, target_id: str, *, include_logs: bool, action: str, question: str = ""
+    ) -> None:
         target = next((item for item in self.docker_targets if item.id == target_id), None)
         if not target:
             return
         snapshot = read_snapshot(target, include_logs=include_logs)
-        self.call_from_thread(self._handle_docker_snapshot, target_id, snapshot, action)
+        self.call_from_thread(self._handle_docker_snapshot, target_id, snapshot, action, question)
 
     # Perform the internal handle docker snapshot step for this workflow.
-    def _handle_docker_snapshot(self, target_id: str, snapshot: DockerSnapshot, action: str) -> None:
+    def _handle_docker_snapshot(
+        self, target_id: str, snapshot: DockerSnapshot, action: str, question: str = ""
+    ) -> None:
         self.docker_snapshots[target_id] = snapshot
         self._fill_docker_targets()
         self._update_action_states()
@@ -758,7 +817,7 @@ class Elijah(App):
             title=f"Docker logs: {target.name}",
             command=f"docker logs --tail 300 --timestamps {snapshot.container_ref}",
             evidence=redact(describe_snapshot(snapshot, include_logs=True)),
-            source="docker", created=time.time(), status="captured",
+            source="docker", created=time.time(), status="captured", question=question,
         )
         self.incidents.insert(0, incident)
         self.selected_ai_id = incident.id
@@ -1297,6 +1356,7 @@ Return compact Markdown with exactly these sections:
 
 Title: {incident.title}
 Source: {incident.source}
+User's analysis question:\n{incident.question or '(No specific question was supplied; provide a general incident analysis.)'}
 Command/context:\n{incident.command or '(none)'}
 Evidence:\n{incident.evidence[:24000]}
 """
@@ -1609,7 +1669,8 @@ Evidence:\n{incident.evidence[:24000]}
             return
         self.query_one("#archive-ai", Button).label = "Restore" if incident.status == "archived" else "Archive"
         command = f"[b #64d9ff]COMMAND / CONTEXT[/]\n{incident.command}\n\n" if incident.command else ""
-        detail.update(f"[b #f1f4ff]{incident.title}[/]\n[dim]{incident.source} · {self._age(incident.created)} · {incident.status}[/]\n\n{command}[b #64d9ff]EVIDENCE[/]\n{self._short(incident.evidence, 1800)}\n\n[b #7de2d1]AI INVESTIGATION[/]\n{incident.analysis or '[dim]No AI response yet.[/]'}")
+        question = f"[b #7de2d1]ANALYSIS QUESTION[/]\n{incident.question}\n\n" if incident.question else ""
+        detail.update(f"[b #f1f4ff]{incident.title}[/]\n[dim]{incident.source} · {self._age(incident.created)} · {incident.status}[/]\n\n{question}{command}[b #64d9ff]EVIDENCE[/]\n{self._short(incident.evidence, 1800)}\n\n[b #7de2d1]AI INVESTIGATION[/]\n{incident.analysis or '[dim]No AI response yet.[/]'}")
 
     # Render fix note detail from the current application state.
     def _render_fix_note_detail(self) -> None:

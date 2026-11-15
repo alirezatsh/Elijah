@@ -41,7 +41,8 @@ DataTable > .datatable--header { background: $elijah-raised; color: $cyan; text-
 DataTable > .datatable--cursor { background: #2b4a78; color: white; }
 #detail { width: 1fr; height: 1fr; margin-left: 1; padding: 1 2; background: $elijah-surface; border: round #29436d; }
 #detail-label { color: $cyan; text-style: bold; margin-bottom: 1; }
-#ai-detail-content, #fix-note-detail-content { height: 1fr; overflow-y: auto; color: #dbe4f8; }
+#ai-detail-scroll, #fix-note-detail-scroll { height: 1fr; overflow-y: auto; }
+#ai-detail-content, #fix-note-detail-content { height: auto; color: #dbe4f8; }
 #detail-actions { height: auto; margin-top: 1; grid-size: 3; grid-gutter: 1 1; }
 #fix-danger-actions { height: auto; margin-top: 1; grid-size: 1; }
 #detail-actions Button, #fix-danger-actions Button { width: 1fr; }

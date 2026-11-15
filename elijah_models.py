@@ -1,5 +1,3 @@
-"""Small, serializable domain models used by Elijah."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -15,6 +13,7 @@ class Incident:
     created: float
     status: str = "new"
     analysis: str = ""
+    question: str = ""
     model: str = ""
     tags: list[str] = field(default_factory=list)
 

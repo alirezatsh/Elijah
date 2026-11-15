@@ -1,5 +1,3 @@
-"""The small, explicit CLI bridge for Elijah Investigator."""
-
 from __future__ import annotations
 
 import argparse

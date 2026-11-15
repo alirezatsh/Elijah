@@ -1,5 +1,3 @@
-"""Safe, local Docker inspection helpers used by the Elijah TUI."""
-
 from __future__ import annotations
 
 import json
@@ -11,7 +9,7 @@ from elijah_models import DockerTarget
 
 
 class DockerError(RuntimeError):
-    """Docker was unavailable or did not return usable container data."""
+    """Docker was unavailable or did  return usable container data."""
 
 
 CONTAINER_ACTIONS = frozenset({"start", "stop", "restart"})
