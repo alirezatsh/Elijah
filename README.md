@@ -1,6 +1,6 @@
 # Elijah Investigator
 
-Elijah is a terminal incident workspace for deliberate requests to any OpenAI-compatible Chat Completions API, plus private **Fix Notes** where you record what actually failed and how you fixed it. Every AI workflow opens a prompt screen first, so nothing is sent until you write your own request and choose **Ask AI**.
+Elijah is a terminal incident workspace for deliberate requests to any OpenAI-compatible Chat Completions API, plus private **Fix Notes** where you record what actually failed and how you fixed it. Every AI workflow opens a prompt screen first: write a custom request to control the response, or leave it blank for Elijah's structured default analysis.
 
 ## Features
 
@@ -240,6 +240,6 @@ Elijah stores the following under `~/.elijah-investigator/`:
 - `inbox/` — pending captures
 - `sessions/` — forensic transcripts
 
-Elijah never sends command history, logs, or transcripts automatically. AI calls happen only after you explicitly choose **Analyze** or **Ask AI**, write a custom request, and confirm it in the prompt screen. The zsh integration skips commands containing obvious credential markers such as `Bearer`, `api_key`, `password`, and `secret`, unless you explicitly set `ELIJAH_CAPTURE_SECRETS=1`.
+Elijah never sends command history, logs, or transcripts automatically. AI calls happen only after you explicitly choose **Analyze** or **Ask AI** and confirm the prompt screen. A custom request is optional; an empty prompt uses Elijah's structured default analysis. The zsh integration skips commands containing obvious credential markers such as `Bearer`, `api_key`, `password`, and `secret`, unless you explicitly set `ELIJAH_CAPTURE_SECRETS=1`.
 
 Do not commit API keys or runtime data, and rotate any token that is accidentally pasted into a terminal, transcript, chat, or incident.

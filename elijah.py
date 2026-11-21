@@ -94,7 +94,7 @@ class SettingsScreen(ModalScreen[dict | None]):
 
 
 class AIQuestion(ModalScreen[str | None]):
-    """Collect an explicit user request before any incident is sent to AI."""
+    """Collect an optional user request before an incident is sent to AI."""
     CSS = """
     AIQuestion { align: center middle; background: rgba(3, 7, 15, 0.82); }
     #question-box { width: 78; height: auto; border: heavy #7de2d1; background: #10192e; padding: 1 2; }
@@ -115,10 +115,10 @@ class AIQuestion(ModalScreen[str | None]):
             yield Label(self.heading)
             yield Static(f"[dim]{self.context[:280]}[/]")
             yield TextArea("", id="ai-question")
-            yield Static("Describe what you want to know, verify, explain, or change. Nothing is sent until you choose Ask AI.", classes="small-note")
+            yield Static("Optional: describe what you want to know, verify, explain, or change. Leave it blank for Elijah's default investigation format.", classes="small-note")
             with Grid(id="question-actions"):
                 yield Button("Cancel", id="cancel")
-                yield Button("Ask AI", id="ask", variant="success")
+                yield Button("Analyze", id="ask", variant="success")
 
     # Handle the submit workflow for this component.
     @on(Button.Pressed)
@@ -127,10 +127,7 @@ class AIQuestion(ModalScreen[str | None]):
             self.dismiss(None)
             return
         question = self.query_one("#ai-question", TextArea).text.strip()
-        if question:
-            self.dismiss(question)
-        else:
-            self.notify("Write a question first.", severity="warning")
+        self.dismiss(question)
 
 
 class ContainerActionScreen(ModalScreen[bool]):
@@ -547,12 +544,10 @@ class Elijah(App):
             lambda question: self._create_manual_incident(title, command, evidence, source, question),
         )
 
-    # Create a manual incident only after the user has provided an AI request.
+    # Create a manual incident with an optional user request for the AI analysis.
     def _create_manual_incident(
         self, title: str, command: str, evidence: str, source: str, question: str | None
     ) -> None:
-        if not question:
-            return
         incident = Incident(
             id=uuid4().hex,
             title=title or self._infer_title(evidence, command),
@@ -561,7 +556,7 @@ class Elijah(App):
             source=source,
             created=time.time(),
             status="queued",
-            question=redact(question),
+            question=redact(question or ""),
         )
         self.incidents.insert(0, incident)
         self.selected_ai_id = incident.id
@@ -1120,20 +1115,18 @@ class Elijah(App):
             lambda question: self._create_command_question(event, question),
         )
 
-    # Open the shared prompt screen and run a callback only for an explicit request.
+    # Open the shared prompt screen and run a callback unless the user cancels it.
     def _ask_ai(self, heading: str, context: str, callback: Callable[[str], None]) -> None:
         if not self._is_configured():
             self.notify("Configure an AI provider with Ctrl+S before asking AI.", severity="warning")
             return
         self.push_screen(
             AIQuestion(heading, context),
-            lambda question: callback(question) if question else None,
+            lambda question: callback(question) if question is not None else None,
         )
 
     # Perform the internal create command question step for this workflow.
     def _create_command_question(self, event: CommandEvent, question: str | None) -> None:
-        if not question:
-            return
         evidence = f"Recorded command: {event.command}\nWorking directory: {event.cwd}\nExit code: {event.exit_code}\nDuration: {event.duration_ms} ms"
         incident = Incident(
             id=uuid4().hex,
@@ -1143,7 +1136,7 @@ class Elijah(App):
             source="command advisor",
             created=time.time(),
             status="queued",
-            question=redact(question),
+            question=redact(question or ""),
         )
         self.incidents.insert(0, incident)
         self.selected_ai_id = incident.id
@@ -1322,10 +1315,10 @@ class Elijah(App):
         self.notify("Local data deleted.")
 
     # ---- AI ----------------------------------------------------------
-    # Save the user's explicit request before the background AI call begins.
+    # Save an optional user request before the background AI call begins.
     def _queue_incident_analysis(self, incident_id: str, question: str) -> None:
         incident = self._by_id(incident_id)
-        if not incident or not question.strip():
+        if not incident:
             return
         incident.question = redact(question.strip())
         incident.status = "queued"
@@ -1360,13 +1353,6 @@ class Elijah(App):
         if not self._is_configured():
             self.call_from_thread(self.notify, "Set AI credentials first.", severity="warning")
             return
-        if not incident.question.strip():
-            self.call_from_thread(
-                self.notify,
-                "Write an AI prompt before starting an analysis.",
-                severity="warning",
-            )
-            return
         self.call_from_thread(self._set_analyzing, incident_id)
         try:
             analysis = self._request_analysis(incident)
@@ -1377,7 +1363,19 @@ class Elijah(App):
     # Prepare the requested analysis operation and its required input.
     def _request_analysis(self, incident: Incident) -> str:
         endpoint = self.config["base_url"].rstrip("/") + "/chat/completions"
-        prompt = f"""You are a senior production-debugging assistant. Analyze this terminal incident.
+        if incident.question.strip():
+            prompt = f"""You are a senior production-debugging assistant.
+Follow the user's request exactly. Do not force a report structure, length, or sections unless the user asks for them.
+Be precise; do not invent commands, files, or facts not present in the evidence.
+
+User request:\n{incident.question}
+Title: {incident.title}
+Source: {incident.source}
+Command/context:\n{incident.command or '(none)'}
+Evidence:\n{incident.evidence[:24000]}
+"""
+        else:
+            prompt = f"""You are a senior production-debugging assistant. Analyze this terminal incident.
 Be precise; do not invent commands, files, or facts not present in the evidence.
 Return compact Markdown with exactly these sections:
 ## What happened
@@ -1389,7 +1387,6 @@ Return compact Markdown with exactly these sections:
 
 Title: {incident.title}
 Source: {incident.source}
-User request:\n{incident.question}
 Command/context:\n{incident.command or '(none)'}
 Evidence:\n{incident.evidence[:24000]}
 """
