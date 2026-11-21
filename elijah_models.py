@@ -15,6 +15,7 @@ class Incident:
     analysis: str = ""
     question: str = ""
     model: str = ""
+    question: str = ""
     tags: list[str] = field(default_factory=list)
 
 

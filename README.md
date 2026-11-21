@@ -1,6 +1,6 @@
 # Elijah Investigator
 
-Elijah is a terminal incident workspace for deliberate requests to any OpenAI-compatible Chat Completions API, plus private **Fix Notes** where you record what actually failed and how you fixed it. Nothing is sent to an AI provider unless you choose **Ask AI**.
+Elijah is a terminal incident workspace for deliberate requests to any OpenAI-compatible Chat Completions API, plus private **Fix Notes** where you record what actually failed and how you fixed it. Every AI workflow opens a prompt screen first, so nothing is sent until you write your own request and choose **Ask AI**.
 
 ## Features
 
@@ -181,7 +181,7 @@ Run the commands you are investigating inside that shell. When it exits, Elijah 
 
 Open **Container watchlist** in Elijah and enter either a container name or a Compose service name. A Compose file path is optional; when supplied, Elijah resolves the service through `docker compose -f <file> ps --all --quiet <service>`, so stopped Compose containers can be started as well.
 
-The watchlist is stored locally. **Refresh** reads Docker state, health-check status, restart count, and image metadata without reading logs. **Capture logs** saves the latest 300 timestamped log lines as a local captured incident. **Analyze** first asks what you want AI to investigate; only after you submit that question does it read the bounded log tail and send the selected evidence to the configured AI provider.
+The watchlist is stored locally. **Refresh** reads Docker state, health-check status, restart count, and image metadata without reading logs. **Capture logs** saves the latest 300 timestamped log lines as a local captured incident. **Analyze logs** first asks what you want AI to investigate, then reads the same bounded log tail and sends that selected evidence together with your request.
 
 The same panel can **Start**, **Stop**, or **Restart** the selected local container. Each lifecycle action opens a confirmation dialog before Elijah sends the Docker command; it does not remove containers, images, volumes, or networks.
 
@@ -240,6 +240,6 @@ Elijah stores the following under `~/.elijah-investigator/`:
 - `inbox/` — pending captures
 - `sessions/` — forensic transcripts
 
-Elijah never sends command history, logs, or transcripts automatically. AI calls happen only after you explicitly choose **Analyze** or **Ask AI**. The zsh integration skips commands containing obvious credential markers such as `Bearer`, `api_key`, `password`, and `secret`, unless you explicitly set `ELIJAH_CAPTURE_SECRETS=1`.
+Elijah never sends command history, logs, or transcripts automatically. AI calls happen only after you explicitly choose **Analyze** or **Ask AI**, write a custom request, and confirm it in the prompt screen. The zsh integration skips commands containing obvious credential markers such as `Bearer`, `api_key`, `password`, and `secret`, unless you explicitly set `ELIJAH_CAPTURE_SECRETS=1`.
 
 Do not commit API keys or runtime data, and rotate any token that is accidentally pasted into a terminal, transcript, chat, or incident.

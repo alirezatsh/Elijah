@@ -9,6 +9,7 @@ import urllib.error
 import urllib.request
 from dataclasses import asdict
 from pathlib import Path
+from typing import Callable
 from uuid import uuid4
 from shell_setup import detect_shell, install as install_other_shell, uninstall as uninstall_other_shell
 from elijah_docker import DockerError, DockerSnapshot, describe_snapshot, manage_container as manage_local_container, read_snapshot
@@ -92,27 +93,29 @@ class SettingsScreen(ModalScreen[dict | None]):
         self.dismiss(values)
 
 
-class CommandQuestion(ModalScreen[str | None]):
-    """Ask a focused question about a recorded command without leaving the TUI."""
+class AIQuestion(ModalScreen[str | None]):
+    """Collect an explicit user request before any incident is sent to AI."""
     CSS = """
-    CommandQuestion { align: center middle; background: rgba(3, 7, 15, 0.82); }
+    AIQuestion { align: center middle; background: rgba(3, 7, 15, 0.82); }
     #question-box { width: 78; height: auto; border: heavy #7de2d1; background: #10192e; padding: 1 2; }
-    #question-box Input { margin: 1 0; }
+    #question-box TextArea { height: 7; margin: 1 0; }
     #question-actions { height: auto; grid-size: 2; grid-gutter: 1 1; }
     #question-actions Button { width: 1fr; }
     """
 
     # Initialize this component and establish its local state.
-    def __init__(self, command: str) -> None:
+    def __init__(self, heading: str, context: str) -> None:
         super().__init__()
-        self.command = command
+        self.heading = heading
+        self.context = context
 
     # Build this Textual component and declare its child widgets.
     def compose(self) -> ComposeResult:
         with Container(id="question-box"):
-            yield Label("ASK COMMAND ADVISOR")
-            yield Static(f"[dim]{self.command[:180]}[/]")
-            yield Input(placeholder="e.g. Explain this, make it safer, or adapt it for production…", id="command-question")
+            yield Label(self.heading)
+            yield Static(f"[dim]{self.context[:280]}[/]")
+            yield TextArea("", id="ai-question")
+            yield Static("Describe what you want to know, verify, explain, or change. Nothing is sent until you choose Ask AI.", classes="small-note")
             with Grid(id="question-actions"):
                 yield Button("Cancel", id="cancel")
                 yield Button("Ask AI", id="ask", variant="success")
@@ -123,54 +126,11 @@ class CommandQuestion(ModalScreen[str | None]):
         if event.button.id == "cancel":
             self.dismiss(None)
             return
-        question = self.query_one("#command-question", Input).value.strip()
+        question = self.query_one("#ai-question", TextArea).text.strip()
         if question:
             self.dismiss(question)
         else:
             self.notify("Write a question first.", severity="warning")
-
-
-class ContainerAnalysisQuestion(ModalScreen[str | None]):
-    """Collect the user's diagnostic goal before Docker logs are sent to AI."""
-
-    BINDINGS = [("escape", "cancel", "Cancel")]
-    CSS = """
-    ContainerAnalysisQuestion { align: center middle; background: rgba(3, 7, 15, 0.82); }
-    #container-question { width: 78; height: auto; border: heavy #7de2d1; background: #10192e; padding: 1 2; }
-    #container-question Input { margin: 1 0; }
-    #container-question-actions { height: auto; grid-size: 2; grid-gutter: 1 1; }
-    #container-question-actions Button { width: 1fr; }
-    """
-
-    def __init__(self, container_name: str) -> None:
-        super().__init__()
-        self.container_name = container_name
-
-    def compose(self) -> ComposeResult:
-        with Container(id="container-question"):
-            yield Label("ASK AI ABOUT CONTAINER LOGS")
-            yield Static(f"Container: [b]{self.container_name}[/]")
-            yield Input(
-                placeholder="e.g. Why is it restarting, and what should I check first?",
-                id="container-analysis-question",
-            )
-            with Grid(id="container-question-actions"):
-                yield Button("Cancel", id="cancel")
-                yield Button("Analyze logs", id="analyze", variant="success")
-
-    @on(Button.Pressed)
-    def submit(self, event: Button.Pressed) -> None:
-        if event.button.id == "cancel":
-            self.dismiss(None)
-            return
-        question = self.query_one("#container-analysis-question", Input).value.strip()
-        if not question:
-            self.notify("Write the analysis question first.", severity="warning")
-            return
-        self.dismiss(question)
-
-    def action_cancel(self) -> None:
-        self.dismiss(None)
 
 
 class ContainerActionScreen(ModalScreen[bool]):
@@ -443,7 +403,7 @@ class Elijah(App):
                     yield Input(placeholder="Container name or Compose service", id="docker-name")
                     yield Input(placeholder="Optional path to compose.yml", id="docker-compose-file")
                     yield Button("Remember container", id="save-docker-target", variant="success")
-                yield Static("Elijah remembers these containers locally. Refresh checks Docker state only; Analyze reads a bounded tail of recent logs and sends it to AI only after you choose it.", id="docker-guide")
+                yield Static("Elijah remembers these containers locally. Refresh checks Docker state only; Analyze asks for your prompt before it reads recent logs and sends selected evidence to AI.", id="docker-guide")
                 with Horizontal(id="docker-layout"):
                     with Vertical(id="docker-list"):
                         yield DataTable(id="docker-table", cursor_type="row")
@@ -580,7 +540,29 @@ class Elijah(App):
         if not evidence:
             self.notify("Paste an error, log, response, or command output first.", severity="warning")
             return
-        incident = Incident(id=uuid4().hex, title=title or self._infer_title(evidence, command), command=command, evidence=evidence, source=source, created=time.time(), status="queued")
+        context = title or self._infer_title(evidence, command)
+        self._ask_ai(
+            "ASK AI TO INVESTIGATE",
+            context,
+            lambda question: self._create_manual_incident(title, command, evidence, source, question),
+        )
+
+    # Create a manual incident only after the user has provided an AI request.
+    def _create_manual_incident(
+        self, title: str, command: str, evidence: str, source: str, question: str | None
+    ) -> None:
+        if not question:
+            return
+        incident = Incident(
+            id=uuid4().hex,
+            title=title or self._infer_title(evidence, command),
+            command=command,
+            evidence=evidence,
+            source=source,
+            created=time.time(),
+            status="queued",
+            question=redact(question),
+        )
         self.incidents.insert(0, incident)
         self.selected_ai_id = incident.id
         self._save_incidents()
@@ -694,16 +676,12 @@ class Elijah(App):
             return
         target = self._selected_docker_target()
         if target:
-            self.push_screen(
-                ContainerAnalysisQuestion(target.name),
-                lambda question: self._analyze_docker_with_question(target.id, question),
-            )
-
-    def _analyze_docker_with_question(self, target_id: str, question: str | None) -> None:
-        """Read logs only after the user states the question for this investigation."""
-        if question:
-            self.refresh_docker_target(
-                target_id, include_logs=True, action="analyze", question=question
+            self._ask_ai(
+                "ASK AI ABOUT DOCKER LOGS",
+                f"Container: {target.name}",
+                lambda question: self.refresh_docker_target(
+                    target.id, include_logs=True, action="analyze", question=question or ""
+                ),
             )
 
     # Handle the start docker workflow for this component.
@@ -817,7 +795,7 @@ class Elijah(App):
             title=f"Docker logs: {target.name}",
             command=f"docker logs --tail 300 --timestamps {snapshot.container_ref}",
             evidence=redact(describe_snapshot(snapshot, include_logs=True)),
-            source="docker", created=time.time(), status="captured", question=question,
+            source="docker", created=time.time(), status="captured", question=redact(question),
         )
         self.incidents.insert(0, incident)
         self.selected_ai_id = incident.id
@@ -826,10 +804,7 @@ class Elijah(App):
         if action == "capture":
             self.notify("Recent Docker logs saved to the local archive.")
             return
-        incident.status = "queued"
-        self._save_incidents()
-        self._refresh()
-        self.analyze_incident(incident.id)
+        self._queue_incident_analysis(incident.id, question)
 
     # ---- remote servers --------------------------------------------
     # Validate and save the remote server entered through the interface.
@@ -952,7 +927,16 @@ class Elijah(App):
         if not self._is_configured():
             self.notify("Configure an AI provider with Ctrl+S before analyzing remote logs.", severity="warning")
             return
-        self.fetch_remote_logs(analyze=True)
+        server = self._selected_remote_server()
+        container = self.selected_remote_container
+        if not server or not container:
+            self.notify("Select a remote server and container first.", severity="warning")
+            return
+        self._ask_ai(
+            "ASK AI ABOUT REMOTE DOCKER LOGS",
+            f"Server: {server.name}\nContainer: {container}",
+            lambda question: self.fetch_remote_logs(analyze=True, question=question or ""),
+        )
 
     # Handle the start remote container workflow for this component.
     @on(Button.Pressed, "#start-remote")
@@ -1015,16 +999,18 @@ class Elijah(App):
         self.refresh_remote_server(server_id)
 
     # Handle the fetch remote logs workflow for this component.
-    def fetch_remote_logs(self, *, analyze: bool) -> None:
+    def fetch_remote_logs(self, *, analyze: bool, question: str = "") -> None:
         server = self._selected_remote_server()
         if not server or not self.selected_remote_container:
             self.notify("Select a remote server and container first.", severity="warning")
             return
-        self.fetch_remote_container_logs(server.id, self.selected_remote_container, analyze)
+        self.fetch_remote_container_logs(server.id, self.selected_remote_container, analyze, question)
 
     # Handle the fetch remote container logs workflow for this component.
     @work(thread=True, exclusive=True, group="remote", exit_on_error=False)
-    def fetch_remote_container_logs(self, server_id: str, container: str, analyze: bool) -> None:
+    def fetch_remote_container_logs(
+        self, server_id: str, container: str, analyze: bool, question: str = ""
+    ) -> None:
         server = next((item for item in self.remote_servers if item.id == server_id), None)
         if not server:
             return
@@ -1034,10 +1020,12 @@ class Elijah(App):
         except RemoteError as exception:
             logs = ""
             error = str(exception)
-        self.call_from_thread(self._finish_remote_logs, server, container, logs, analyze, error)
+        self.call_from_thread(self._finish_remote_logs, server, container, logs, analyze, error, question)
 
     # Apply the completed background result for remote logs to the UI state.
-    def _finish_remote_logs(self, server: RemoteServer, container: str, logs: str, analyze: bool, error: str) -> None:
+    def _finish_remote_logs(
+        self, server: RemoteServer, container: str, logs: str, analyze: bool, error: str, question: str = ""
+    ) -> None:
         if error:
             self.notify(f"Could not read remote logs: {error}", severity="error")
             return
@@ -1046,14 +1034,14 @@ class Elijah(App):
             title=f"Remote Docker logs: {server.name} / {container}",
             command=f"ssh {server.user}@{server.host} docker logs --tail 300 --timestamps {container}",
             evidence=redact(f"Remote server: {server.name} ({server.host})\nContainer: {container}\n\nRecent Docker logs:\n{logs}"),
-            source="remote docker", created=time.time(), status="queued" if analyze else "captured",
+            source="remote docker", created=time.time(), status="captured", question=redact(question),
         )
         self.incidents.insert(0, incident)
         self.selected_ai_id = incident.id
         self._save_incidents()
         self._refresh()
         if analyze:
-            self.analyze_incident(incident.id)
+            self._queue_incident_analysis(incident.id, question)
         else:
             self.notify("Remote Docker logs saved to the local archive.")
 
@@ -1126,14 +1114,37 @@ class Elijah(App):
         if not event:
             self.notify("Select a command from the timeline first.", severity="warning")
             return
-        self.push_screen(CommandQuestion(event.command), lambda question: self._create_command_question(event, question))
+        self._ask_ai(
+            "ASK COMMAND ADVISOR",
+            event.command,
+            lambda question: self._create_command_question(event, question),
+        )
+
+    # Open the shared prompt screen and run a callback only for an explicit request.
+    def _ask_ai(self, heading: str, context: str, callback: Callable[[str], None]) -> None:
+        if not self._is_configured():
+            self.notify("Configure an AI provider with Ctrl+S before asking AI.", severity="warning")
+            return
+        self.push_screen(
+            AIQuestion(heading, context),
+            lambda question: callback(question) if question else None,
+        )
 
     # Perform the internal create command question step for this workflow.
     def _create_command_question(self, event: CommandEvent, question: str | None) -> None:
         if not question:
             return
-        evidence = f"Recorded command: {event.command}\nWorking directory: {event.cwd}\nExit code: {event.exit_code}\nDuration: {event.duration_ms} ms\n\nUser question: {question}"
-        incident = Incident(id=uuid4().hex, title=f"Command inquiry: {self._short(event.command, 68)}", command=event.command, evidence=evidence, source="command advisor", created=time.time(), status="queued")
+        evidence = f"Recorded command: {event.command}\nWorking directory: {event.cwd}\nExit code: {event.exit_code}\nDuration: {event.duration_ms} ms"
+        incident = Incident(
+            id=uuid4().hex,
+            title=f"Command inquiry: {self._short(event.command, 68)}",
+            command=event.command,
+            evidence=evidence,
+            source="command advisor",
+            created=time.time(),
+            status="queued",
+            question=redact(question),
+        )
         self.incidents.insert(0, incident)
         self.selected_ai_id = incident.id
         self._save_incidents()
@@ -1145,7 +1156,11 @@ class Elijah(App):
     def reanalyze_ai_button(self) -> None:
         incident = self._selected_ai()
         if incident:
-            self.analyze_incident(incident.id)
+            self._ask_ai(
+                "ASK AI ABOUT THIS INVESTIGATION",
+                incident.title,
+                lambda question: self._queue_incident_analysis(incident.id, question),
+            )
 
     # Handle the new ai investigation workflow for this component.
     @on(Button.Pressed, "#new-ai")
@@ -1307,6 +1322,17 @@ class Elijah(App):
         self.notify("Local data deleted.")
 
     # ---- AI ----------------------------------------------------------
+    # Save the user's explicit request before the background AI call begins.
+    def _queue_incident_analysis(self, incident_id: str, question: str) -> None:
+        incident = self._by_id(incident_id)
+        if not incident or not question.strip():
+            return
+        incident.question = redact(question.strip())
+        incident.status = "queued"
+        self._save_incidents()
+        self._refresh()
+        self.analyze_incident(incident.id)
+
     # Handle the named application action: settings.
     def action_settings(self) -> None:
         self.push_screen(SettingsScreen(self.config), self._save_settings)
@@ -1334,6 +1360,13 @@ class Elijah(App):
         if not self._is_configured():
             self.call_from_thread(self.notify, "Set AI credentials first.", severity="warning")
             return
+        if not incident.question.strip():
+            self.call_from_thread(
+                self.notify,
+                "Write an AI prompt before starting an analysis.",
+                severity="warning",
+            )
+            return
         self.call_from_thread(self._set_analyzing, incident_id)
         try:
             analysis = self._request_analysis(incident)
@@ -1356,7 +1389,7 @@ Return compact Markdown with exactly these sections:
 
 Title: {incident.title}
 Source: {incident.source}
-User's analysis question:\n{incident.question or '(No specific question was supplied; provide a general incident analysis.)'}
+User request:\n{incident.question}
 Command/context:\n{incident.command or '(none)'}
 Evidence:\n{incident.evidence[:24000]}
 """
@@ -1669,8 +1702,8 @@ Evidence:\n{incident.evidence[:24000]}
             return
         self.query_one("#archive-ai", Button).label = "Restore" if incident.status == "archived" else "Archive"
         command = f"[b #64d9ff]COMMAND / CONTEXT[/]\n{incident.command}\n\n" if incident.command else ""
-        question = f"[b #7de2d1]ANALYSIS QUESTION[/]\n{incident.question}\n\n" if incident.question else ""
-        detail.update(f"[b #f1f4ff]{incident.title}[/]\n[dim]{incident.source} · {self._age(incident.created)} · {incident.status}[/]\n\n{question}{command}[b #64d9ff]EVIDENCE[/]\n{self._short(incident.evidence, 1800)}\n\n[b #7de2d1]AI INVESTIGATION[/]\n{incident.analysis or '[dim]No AI response yet.[/]'}")
+        question = f"[b #7de2d1]YOUR REQUEST[/]\n{incident.question}\n\n" if incident.question else ""
+        detail.update(f"[b #f1f4ff]{incident.title}[/]\n[dim]{incident.source} · {self._age(incident.created)} · {incident.status}[/]\n\n{command}{question}[b #64d9ff]EVIDENCE[/]\n{self._short(incident.evidence, 1800)}\n\n[b #7de2d1]AI INVESTIGATION[/]\n{incident.analysis or '[dim]No AI response yet.[/]'}")
 
     # Render fix note detail from the current application state.
     def _render_fix_note_detail(self) -> None:
